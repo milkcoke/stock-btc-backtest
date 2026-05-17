@@ -85,6 +85,62 @@ func (s *MonthlyDCAStrategy) OnDay(date time.Time, price float64, _ float64, p *
 	}
 }
 
+// FearGreedTieredStrategy: accumulates $1,000/month and deploys a percentage of
+// all saved cash based on how fearful the market is (once per month).
+//
+//	F&G <= 10 → buy 100% of cash
+//	F&G <= 15 → buy  80% of cash
+//	F&G <= 24 → buy  50% of cash
+type FearGreedTieredStrategy struct {
+	Label         string
+	MonthlyAmount float64
+
+	started      bool
+	pendingCash  float64
+	lastAccumKey int
+	lastBuyKey   int
+}
+
+func (s *FearGreedTieredStrategy) Name() string { return s.Label }
+
+func (s *FearGreedTieredStrategy) OnDay(date time.Time, price float64, fearGreed float64, p *portfolio.Portfolio) {
+	if !s.started {
+		s.started = true
+		mk := monthKey(date.Year(), date.Month())
+		s.lastBuyKey = mk
+		s.lastAccumKey = mk - 1
+		return
+	}
+
+	mk := monthKey(date.Year(), date.Month())
+
+	if mk > s.lastAccumKey {
+		s.pendingCash += s.MonthlyAmount
+		s.lastAccumKey = mk
+	}
+
+	if fearGreed < 0 || s.pendingCash <= 0 || mk <= s.lastBuyKey {
+		return
+	}
+
+	var pct float64
+	switch {
+	case fearGreed <= 10:
+		pct = 1.0
+	case fearGreed <= 15:
+		pct = 0.8
+	case fearGreed <= 24:
+		pct = 0.5
+	default:
+		return
+	}
+
+	amount := s.pendingCash * pct
+	p.Buy(amount, price)
+	s.pendingCash -= amount
+	s.lastBuyKey = mk
+}
+
 // FearGreedAccumStrategy: invests an initial lump sum on day 1, then accumulates
 // a fixed monthly amount as cash. On extreme fear, deploys ALL available cash
 // (savings + any sell proceeds) at once. Optionally sells everything on extreme

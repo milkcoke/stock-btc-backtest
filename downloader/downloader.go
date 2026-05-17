@@ -33,6 +33,10 @@ type yahooResponse struct {
 func TQQQ(path string) error { return Stock("TQQQ", path) }
 func QLD(path string) error  { return Stock("QLD", path) }
 func QQQ(path string) error  { return Stock("QQQ", path) }
+func TSLA(path string) error { return Stock("TSLA", path) }
+func PLTR(path string) error { return Stock("PLTR", path) }
+func IREN(path string) error { return Stock("IREN", path) }
+func RKLB(path string) error { return Stock("RKLB", path) }
 
 func Stock(symbol, path string) error {
 	period1 := time.Date(1999, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
