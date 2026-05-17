@@ -85,55 +85,56 @@ func (s *MonthlyDCAStrategy) OnDay(date time.Time, price float64, _ float64, p *
 	}
 }
 
-// FearGreedBuyStrategy: buy a fixed amount when F&G index is at or below threshold,
-// at most once per calendar month. Represents Strategy 4.
-type FearGreedBuyStrategy struct {
-	Label        string
-	BuyAmount    float64
-	BuyThreshold float64
+// FearGreedAccumStrategy: invests an initial lump sum on day 1, then accumulates
+// a fixed monthly amount as cash. On extreme fear, deploys ALL available cash
+// (savings + any sell proceeds) at once. Optionally sells everything on extreme
+// greed when SellThreshold > 0.
+type FearGreedAccumStrategy struct {
+	Label         string
+	InitialAmount float64 // invested on day 1
+	MonthlyAmount float64 // added to cash each non-buy month
+	BuyThreshold  float64 // F&G <= this triggers buy-all
+	SellThreshold float64 // F&G >= this triggers sell-all (0 = never sell)
+
+	started      bool
+	pendingCash  float64 // monthly savings not yet deployed
+	lastAccumKey int
 	lastBuyKey   int
 }
 
-func (s *FearGreedBuyStrategy) Name() string { return s.Label }
+func (s *FearGreedAccumStrategy) Name() string { return s.Label }
 
-func (s *FearGreedBuyStrategy) OnDay(date time.Time, price float64, fearGreed float64, p *portfolio.Portfolio) {
-	if fearGreed < 0 || fearGreed > s.BuyThreshold {
+func (s *FearGreedAccumStrategy) OnDay(date time.Time, price float64, fearGreed float64, p *portfolio.Portfolio) {
+	if !s.started {
+		p.Buy(s.InitialAmount, price)
+		s.started = true
+		mk := monthKey(date.Year(), date.Month())
+		s.lastBuyKey = mk
+		s.lastAccumKey = mk - 1 // allow accumulation to start in the first month
 		return
 	}
-	key := monthKey(date.Year(), date.Month())
-	if key > s.lastBuyKey {
-		p.Buy(s.BuyAmount, price)
-		s.lastBuyKey = key
+
+	mk := monthKey(date.Year(), date.Month())
+
+	// Accumulate on the first trading day of each new month (always, even in sell months)
+	if mk > s.lastAccumKey {
+		s.pendingCash += s.MonthlyAmount
+		s.lastAccumKey = mk
 	}
-}
 
-// FearGreedBuySellStrategy: buy on extreme fear (once/month), sell all on extreme greed.
-// Represents Strategy 5.
-type FearGreedBuySellStrategy struct {
-	Label         string
-	BuyAmount     float64
-	BuyThreshold  float64
-	SellThreshold float64
-	lastBuyKey    int
-}
-
-func (s *FearGreedBuySellStrategy) Name() string { return s.Label }
-
-func (s *FearGreedBuySellStrategy) OnDay(date time.Time, price float64, fearGreed float64, p *portfolio.Portfolio) {
-	if fearGreed < 0 {
-		return
-	}
-	if fearGreed >= s.SellThreshold && p.Shares > 0 {
+	// Sell all on greed
+	if s.SellThreshold > 0 && fearGreed >= s.SellThreshold && p.Shares > 0 {
 		p.SellAll(price)
 		return
 	}
-	if fearGreed <= s.BuyThreshold {
-		key := monthKey(date.Year(), date.Month())
-		if key > s.lastBuyKey {
-			if !p.Reinvest(price) {
-				p.Buy(s.BuyAmount, price) // first buy: inject new capital
-			}
-			s.lastBuyKey = key
+
+	// Deploy all cash on extreme fear (once per month)
+	if fearGreed >= 0 && fearGreed <= s.BuyThreshold && mk > s.lastBuyKey {
+		if s.pendingCash > 0 {
+			p.Buy(s.pendingCash, price) // new capital → tracked in TotalInvested
+			s.pendingCash = 0
 		}
+		p.Reinvest(price) // sell proceeds → not tracked in TotalInvested
+		s.lastBuyKey = mk
 	}
 }

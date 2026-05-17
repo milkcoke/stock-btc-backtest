@@ -10,14 +10,14 @@ This is for getting best algorithm for BTC and TQQQ investment using historical 
 ## TQQQ BackTest
 Price follows the tqqq.csv file `AdjClose` column.
 
-| Index | Initial Amount (USD) | Buy Condition                                                 | Buy Amount (USD)              | Sell Condition                                 | Sell Amount | MDD | Final Account (USD) | ROI |
-|-------|----------------------|---------------------------------------------------------------|-------------------------------|------------------------------------------------|-------------|-----|---------------------|-----|
-| 1     | Year * $12,000       | Start date                                                    | 100%                          | Never                                          | 0%          |     |                     |     |
-| 2     | $0                   | Every January 1st                                             | $12,000                       | Never                                          | 0%          |     |                     |     |
-| 3     | $0                   | Every 25th monthly                                            | $1,000                        | Never                                          | 0%          |     |                     |     |
-| 4     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | Never                                          | 0%          |     |                     |     |
-| 5     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | CNN Fear and Greed Index >= 76 (Extreme Greed) | 100%        |     |                     |     |
-| 6     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | CNN Fear and Greed Index >= 60 (Greed)         | 100%        |     |                     |     |
+| Index | Initial Amount (USD) | Buy Condition                                                                                                                   | Buy Amount (USD)                               | Sell Condition                                 | Sell Amount | MDD | Final Account (USD) | ROI |
+|-------|----------------------|---------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|------------------------------------------------|-------------|-----|---------------------|-----|
+| 1     | Year * $12,000       | Start date                                                                                                                      | 100%                                           | Never                                          | 0%          |     |                     |     |
+| 2     | $0                   | Every January 1st                                                                                                               | $12,000                                        | Never                                          | 0%          |     |                     |     |
+| 3     | $0                   | Every 25th monthly                                                                                                              | $1,000                                         | Never                                          | 0%          |     |                     |     |
+| 4     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | Never                                          | 0%          |     |                     |     |
+| 5     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | CNN Fear and Greed Index >= 76 (Extreme Greed) | 100%        |     |                     |     |
+| 6     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | CNN Fear and Greed Index >= 60 (Greed)         | 100%        |     |                     |     |
 
 
 ## BTC BackTest

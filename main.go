@@ -118,20 +118,24 @@ func buildStrategies(lumpSum float64, years int) []strategy.Strategy {
 			MonthlyAmount: 1_000,
 			DayOfMonth:    25,
 		},
-		&strategy.FearGreedBuyStrategy{
-			Label:        "Strategy 4: Buy $12,000 when F&G <= 24 (once/month)",
-			BuyAmount:    12_000,
-			BuyThreshold: 24,
+		&strategy.FearGreedAccumStrategy{
+			Label:         "Strategy 4: Save $1,000/month, buy all on F&G <= 24",
+			InitialAmount: 0,
+			MonthlyAmount: 1_000,
+			BuyThreshold:  24,
+			SellThreshold: 0,
 		},
-		&strategy.FearGreedBuySellStrategy{
-			Label:         "Strategy 5: Buy $12,000 on Extreme Fear, Sell on Extreme Greed (>= 76)",
-			BuyAmount:     12_000,
+		&strategy.FearGreedAccumStrategy{
+			Label:         "Strategy 5: Save $1,000/month, buy all on F&G <= 24, sell on Greed >= 76",
+			InitialAmount: 0,
+			MonthlyAmount: 1_000,
 			BuyThreshold:  24,
 			SellThreshold: 76,
 		},
-		&strategy.FearGreedBuySellStrategy{
-			Label:         "Strategy 6: Buy $12,000 on Extreme Fear, Sell on Greed (>= 60)",
-			BuyAmount:     12_000,
+		&strategy.FearGreedAccumStrategy{
+			Label:         "Strategy 6: Save $1,000/month, buy all on F&G <= 24, sell on Greed >= 60",
+			InitialAmount: 0,
+			MonthlyAmount: 1_000,
 			BuyThreshold:  24,
 			SellThreshold: 60,
 		},
