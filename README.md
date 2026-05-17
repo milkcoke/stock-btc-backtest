@@ -15,10 +15,9 @@ Price follows the tqqq.csv file `AdjClose` column.
 | 1     | Year * $12,000       | Start date                                                    | 100%                          | Never                                          | 0%          |     |                     |     |
 | 2     | $0                   | Every January 1st                                             | $12,000                       | Never                                          | 0%          |     |                     |     |
 | 3     | $0                   | Every 25th monthly                                            | $1,000                        | Never                                          | 0%          |     |                     |     |
-| 4     | $0                   | Every 1st monthly                                             | $1,000                        | Never                                          | 0%          |     |                     |     |
-| 5     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | Never                                          | 0%          |     |                     |     |
-| 6     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | CNN Fear and Greed Index >= 76 (Extreme Greed) | 100%        |     |                     |     |
-| 7     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | CNN Fear and Greed Index >= 60 (Greed)         | 100%        |     |                     |     |
+| 4     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | Never                                          | 0%          |     |                     |     |
+| 5     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | CNN Fear and Greed Index >= 76 (Extreme Greed) | 100%        |     |                     |     |
+| 6     | $0                   | CNN Fear and Greed Index <= 24 (Extreme Fear) once in a month | First $12,000 (Previous 100%) | CNN Fear and Greed Index >= 60 (Greed)         | 100%        |     |                     |     |
 
 
 ## BTC BackTest
