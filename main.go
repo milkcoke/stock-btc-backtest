@@ -1,0 +1,145 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"log"
+	"os"
+	"time"
+
+	"stock-btc-backtest/backtester"
+	"stock-btc-backtest/chart"
+	"stock-btc-backtest/downloader"
+	"stock-btc-backtest/loader"
+	"stock-btc-backtest/reporter"
+	"stock-btc-backtest/strategy"
+)
+
+const fearGreedCSV = "data/cnn_fear_greed.csv"
+
+func main() {
+	startStr := flag.String("start", "2011-01-03", "backtest start date (YYYY-MM-DD)")
+	endStr := flag.String("end", time.Now().Format("2006-01-02"), "backtest end date (YYYY-MM-DD)")
+	flag.Parse()
+
+	start, err := time.Parse("2006-01-02", *startStr)
+	if err != nil {
+		log.Fatalf("invalid start date: %v", err)
+	}
+	end, err := time.Parse("2006-01-02", *endStr)
+	if err != nil {
+		log.Fatalf("invalid end date: %v", err)
+	}
+
+	fearGreed, err := loader.FearGreedLoader{}.Load(fearGreedCSV)
+	if err != nil {
+		log.Fatalf("load fear/greed: %v", err)
+	}
+
+	years := end.Year() - start.Year()
+	lumpSum := float64(years) * 12_000
+
+	tickerConfigs := []struct {
+		symbol string
+		path   string
+		color  string
+		dl     func(string) error
+	}{
+		{"TQQQ", "data/tqqq.csv", "#e74c3c", downloader.TQQQ},
+		{"QLD", "data/qld.csv", "#e67e22", downloader.QLD},
+		{"QQQ", "data/qqq.csv", "#3498db", downloader.QQQ},
+	}
+
+	rp := reporter.Reporter{}
+	var tickerCharts []chart.TickerChart
+
+	for _, t := range tickerConfigs {
+		if _, err := os.Stat(t.path); os.IsNotExist(err) {
+			log.Printf("downloading %s...", t.symbol)
+			if err := t.dl(t.path); err != nil {
+				log.Fatalf("download %s failed: %v", t.symbol, err)
+			}
+		}
+		prices, err := loader.PriceLoader{}.Load(t.path)
+		if err != nil {
+			log.Fatalf("load %s: %v", t.symbol, err)
+		}
+
+		bt := backtester.New(prices, fearGreed)
+		strats := buildStrategies(lumpSum, years)
+		results := make([]backtester.Result, len(strats))
+		for i, s := range strats {
+			results[i] = bt.Run(s, start, end)
+		}
+		rp.Print(t.symbol, results, start, end)
+		tickerCharts = append(tickerCharts, chart.TickerChart{
+			Symbol:  t.symbol,
+			Results: results,
+		})
+	}
+
+	const chartPath = "chart.html"
+	if err := chart.Generate(chartPath, tickerCharts, start, end); err != nil {
+		log.Fatalf("generate chart: %v", err)
+	}
+	log.Printf("chart saved → %s", chartPath)
+
+	// Strategy 3 is index 2 — compare same strategy across all tickers
+	const strategy3Idx = 2
+	var compLines []chart.ComparisonLine
+	for i, t := range tickerConfigs {
+		compLines = append(compLines, chart.ComparisonLine{
+			Label:  t.symbol,
+			Color:  t.color,
+			Result: tickerCharts[i].Results[strategy3Idx],
+		})
+	}
+	strategyName := tickerCharts[0].Results[strategy3Idx].StrategyName
+	const compPath = "chart_strategy3.html"
+	if err := chart.GenerateComparison(compPath, strategyName, compLines, start, end); err != nil {
+		log.Fatalf("generate comparison chart: %v", err)
+	}
+	log.Printf("comparison chart saved → %s", compPath)
+}
+
+func buildStrategies(lumpSum float64, years int) []strategy.Strategy {
+	return []strategy.Strategy{
+		&strategy.LumpSumStrategy{
+			Label:  fmt.Sprintf("Strategy 1: Lump-sum $%.0f (%d yrs × $12,000) on day 1", lumpSum, years),
+			Amount: lumpSum,
+		},
+		&strategy.AnnualDCAStrategy{
+			InitialAmount: 0,
+			AnnualAmount:  12_000,
+		},
+		&strategy.MonthlyDCAStrategy{
+			Label:         "Strategy 3: $1,000 on 25th monthly",
+			InitialAmount: 0,
+			MonthlyAmount: 1_000,
+			DayOfMonth:    25,
+		},
+		&strategy.MonthlyDCAStrategy{
+			Label:         "Strategy 4: $1,000 on 1st monthly",
+			InitialAmount: 0,
+			MonthlyAmount: 1_000,
+			DayOfMonth:    1,
+		},
+		&strategy.FearGreedBuyStrategy{
+			Label:        "Strategy 5: Buy $12,000 when F&G <= 24 (once/month)",
+			BuyAmount:    12_000,
+			BuyThreshold: 24,
+		},
+		&strategy.FearGreedBuySellStrategy{
+			Label:         "Strategy 6: Buy $12,000 on Extreme Fear, Sell on Extreme Greed (>= 76)",
+			BuyAmount:     12_000,
+			BuyThreshold:  24,
+			SellThreshold: 76,
+		},
+		&strategy.FearGreedBuySellStrategy{
+			Label:         "Strategy 7: Buy $12,000 on Extreme Fear, Sell on Greed (>= 60)",
+			BuyAmount:     12_000,
+			BuyThreshold:  24,
+			SellThreshold: 60,
+		},
+	}
+}

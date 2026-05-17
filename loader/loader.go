@@ -1,0 +1,67 @@
+package loader
+
+import (
+	"encoding/csv"
+	"os"
+	"strconv"
+	"time"
+)
+
+type PriceRecord struct {
+	Date     time.Time
+	AdjClose float64
+}
+
+type PriceLoader struct{}
+
+func (PriceLoader) Load(path string) ([]PriceRecord, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	rows, err := csv.NewReader(f).ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	records := make([]PriceRecord, 0, len(rows)-1)
+	for _, row := range rows[1:] {
+		date, err := time.Parse("2006-01-02", row[0])
+		if err != nil {
+			continue
+		}
+		adjClose, err := strconv.ParseFloat(row[5], 64)
+		if err != nil {
+			continue
+		}
+		records = append(records, PriceRecord{Date: date, AdjClose: adjClose})
+	}
+	return records, nil
+}
+
+type FearGreedLoader struct{}
+
+func (FearGreedLoader) Load(path string) (map[string]float64, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	rows, err := csv.NewReader(f).ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	m := make(map[string]float64, len(rows)-1)
+	for _, row := range rows[1:] {
+		val, err := strconv.ParseFloat(row[1], 64)
+		if err != nil {
+			continue
+		}
+		m[row[0]] = val
+	}
+	return m, nil
+}
