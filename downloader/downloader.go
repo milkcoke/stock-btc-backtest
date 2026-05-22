@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -28,6 +29,52 @@ type yahooResponse struct {
 			} `json:"indicators"`
 		} `json:"result"`
 	} `json:"chart"`
+}
+
+// EnsureUpToDate downloads fresh data only when the CSV is missing or its last date is before today.
+func EnsureUpToDate(path string, dl func(string) error) error {
+	if !needsUpdate(path) {
+		return nil
+	}
+	return dl(path)
+}
+
+func needsUpdate(path string) bool {
+	last, err := lastDateInCSV(path)
+	if err != nil {
+		return true
+	}
+	today := time.Now().UTC().Truncate(24 * time.Hour)
+	return last.Before(today)
+}
+
+func lastDateInCSV(path string) (time.Time, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer f.Close()
+
+	info, err := f.Stat()
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	bufSize := int64(256)
+	if bufSize > info.Size() {
+		bufSize = info.Size()
+	}
+	buf := make([]byte, bufSize)
+	if _, err := f.ReadAt(buf, info.Size()-bufSize); err != nil {
+		return time.Time{}, err
+	}
+
+	s := strings.TrimRight(string(buf), "\r\n")
+	if idx := strings.LastIndexByte(s, '\n'); idx >= 0 {
+		s = s[idx+1:]
+	}
+	dateStr, _, _ := strings.Cut(s, ",")
+	return time.Parse("2006-01-02", strings.TrimSpace(dateStr))
 }
 
 func TQQQ(path string) error { return Stock("TQQQ", path) }
