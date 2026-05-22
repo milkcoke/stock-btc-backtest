@@ -1,7 +1,7 @@
 
 
 # Introduction
-This is for getting best algorithm for BTC and TQQQ investment using historical price and some matrics.
+This is for getting the best algorithm for BTC and TQQQ investment using historical price and some matrics.
 
 
 # BackTest Result
@@ -19,6 +19,24 @@ Price follows the tqqq.csv file `AdjClose` column.
 | 5     | $0                   | CNN F&G index <= 24 (Extreme Fear) 50% once in a month, index <= 15 80% cash,  inex <= 10 100% cash and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | Never                                          | 0%          |     |                     |     |
 | 6     | $0                   | CNN F&G index <= 24 (Extreme Fear) once in a month, and deposit cash every month 25th day, 1000$ until next buy date                                                 | Save 1,000$. Buy it using all accumulated cash | CNN Fear and Greed Index >= 76 (Extreme Greed) | 100%        |     |                     |     |
 
+## Tax calculation
+
+| Stock | Capital Gains Tax | Tax-free Amount | Gross Expense Ratio (per year) |
+|-------|-------------------|-----------------|--------------------------------|
+| TQQQ  | 22%               | 1,700 $         | 0.97%                          |
+| QLD   | 22%               | 1,700 $         | 0.95%                          |
+| KQLD  | 9.9%              | 1,333 $         | 0.3372%                        |
+| QQQ   | 22%               | 1,700 $         | 0.18%                          |
+
+What's KQLD?
+미래에셋 TIGER 미국나스닥100레버리지증권상장지수투자신탁(주식혼합-파생형)(합성)[K55301DQ3577]
+
+"KQLD is a leveraged ETF that tracks 2x the daily price movement, just like QLD. 
+Its expense ratio is 0.3372%, which is 0.6128% cheaper than QLD."
+
+> You don't have to care about Gross Expense Ratio TQQQ, QLD, QQQ Since it already reflected in the price. 
+> But for KQLD, you have to consider it because it's synthetic ETF and the price doesn't reflect the expense ratio. 
+> So I applied discounted Gross Expense Ratio on the KQLD
 
 ## BTC BackTest
 
