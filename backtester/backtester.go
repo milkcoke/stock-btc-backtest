@@ -30,12 +30,13 @@ func (r Result) ReturnPct() float64 {
 }
 
 type Backtester struct {
-	prices    []loader.PriceRecord
-	fearGreed map[string]float64
+	prices       []loader.PriceRecord
+	fearGreed    map[string]float64
+	extraDailyER float64 // (thisETF_TER - priceData_TER) / 365; negative means lower fees than price data
 }
 
-func New(prices []loader.PriceRecord, fearGreed map[string]float64) *Backtester {
-	return &Backtester{prices: prices, fearGreed: fearGreed}
+func New(prices []loader.PriceRecord, fearGreed map[string]float64, annualERDelta float64) *Backtester {
+	return &Backtester{prices: prices, fearGreed: fearGreed, extraDailyER: annualERDelta / 365.0}
 }
 
 func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
@@ -54,6 +55,9 @@ func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
 			fg = -1
 		}
 		s.OnDay(pr.Date, pr.AdjClose, fg, p)
+		if b.extraDailyER != 0 {
+			p.Shares *= (1 - b.extraDailyER)
+		}
 		lastPrice = pr.AdjClose
 
 		value := p.TotalValue(pr.AdjClose)

@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"stock-btc-backtest/backtester"
@@ -40,24 +39,26 @@ func main() {
 	lumpSum := float64(years) * 12_000
 
 	tickerConfigs := []struct {
-		symbol string
-		path   string
-		color  string
-		dl     func(string) error
+		symbol  string
+		path    string
+		color   string
+		erDelta float64 // (this ETF's TER - price data ETF's TER); 0 if price data already embeds correct TER
+		dl      func(string) error
 	}{
-		{"TQQQ", "data/tqqq.csv", "#e74c3c", downloader.TQQQ},
-		{"QLD", "data/qld.csv", "#e67e22", downloader.QLD},
-		{"QQQ", "data/qqq.csv", "#3498db", downloader.QQQ},
+		{"TQQQ", "data/tqqq.csv", "#e74c3c", 0, downloader.TQQQ},
+		{"QLD", "data/qld.csv", "#e67e22", 0, downloader.QLD},
+		{"QQQ", "data/qqq.csv", "#3498db", 0, downloader.QQQ},
+		// KQLD: 2x QQQ Korean ETF, uses QLD price data; TER 0.3372% vs QLD's 0.95% → lower fees
+		{"KQLD", "data/qld.csv", "#2ecc71", 0.003372 - 0.0095, nil},
 	}
 
 	rp := reporter.Reporter{}
 	var tickerCharts []chart.TickerChart
 
 	for _, t := range tickerConfigs {
-		if _, err := os.Stat(t.path); os.IsNotExist(err) {
-			log.Printf("downloading %s...", t.symbol)
-			if err := t.dl(t.path); err != nil {
-				log.Fatalf("download %s failed: %v", t.symbol, err)
+		if t.dl != nil {
+			if err := downloader.EnsureUpToDate(t.path, t.dl); err != nil {
+				log.Fatalf("update %s failed: %v", t.symbol, err)
 			}
 		}
 		prices, err := loader.PriceLoader{}.Load(t.path)
@@ -65,7 +66,7 @@ func main() {
 			log.Fatalf("load %s: %v", t.symbol, err)
 		}
 
-		bt := backtester.New(prices, fearGreed)
+		bt := backtester.New(prices, fearGreed, t.erDelta)
 		strats := buildStrategies(lumpSum, years)
 		results := make([]backtester.Result, len(strats))
 		for i, s := range strats {
