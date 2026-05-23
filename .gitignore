@@ -28,3 +28,6 @@ go.work.sum
 # Intellij IDEA
 .idea
 *.iml
+
+# BitBo Paid Data
+data/MVRV_Z-Score.csv
