@@ -1,6 +1,7 @@
 package backtester
 
 import (
+	"math"
 	"time"
 
 	"stock-btc-backtest/loader"
@@ -52,7 +53,7 @@ func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
 		}
 		fg, ok := b.fearGreed[pr.Date.Format("2006-01-02")]
 		if !ok {
-			fg = -1
+			fg = math.NaN()
 		}
 		s.OnDay(pr.Date, pr.AdjClose, fg, p)
 		if b.extraDailyER != 0 {
