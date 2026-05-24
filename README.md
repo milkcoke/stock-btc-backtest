@@ -5,7 +5,7 @@ This is for getting the best algorithm for BTC and TQQQ investment using histori
 
 
 # BackTest Result
-@Today 2026-05-17 
+2026-05-22 
 
 ## TQQQ BackTest
 Price follows the tqqq.csv file `AdjClose` column.
@@ -40,7 +40,28 @@ Its expense ratio is 0.3372%, which is 0.6128% cheaper than QLD."
 
 ## BTC BackTest
 
+No Tax for BTC in Korea.
 
+| Index | Initial Amount (USD) | Buy Condition                                                                                         | Buy Amount (USD)                               | Sell Condition                      | Sell Amount | MDD | Final Account (USD) | ROI |
+|-------|----------------------|-------------------------------------------------------------------------------------------------------|------------------------------------------------|-------------------------------------|-------------|-----|---------------------|-----|
+| 1     | Year * $12,000       | Start date                                                                                            | 100%                                           | Never                               | 0%          |     |                     |     ||
+| 2     | $0                   | Every January 1st                                                                                     | $12,000                                        | Never                               | 0%          |     |                     |     ||
+| 3     | $0                   | Every 25th monthly                                                                                    | $1,000                                         | Never                               | 0%          |     |                     |     |
+| 4     | $0                   | MVRV/Z-Score <= 0 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | Never                               | 0%          |     |                     |     ||
+| 5     | $0                   | MVRV/Z-Score <= 0 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 7 once in a month   | 100%        |     |                     |     ||
+| 6     | $0                   | MVRV/Z-Score <= 0 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 6 once in a month   | 100%        |     |                     |     ||
+| 7     | $0                   | MVRV/Z-Score <= 0 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
+| 8     | $0                   | MVRV/Z-Score <= 0 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
+| 9     | $0                   | MVRV/Z-Score <= 0.5 once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | Never                               | 0%          |     |                     |     ||
+| 10    | $0                   | MVRV/Z-Score <= 0.5 once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 7 once in a month   | 100%        |     |                     |     ||
+| 11    | $0                   | MVRV/Z-Score <= 0.5 once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 6 once in a month   | 100%        |     |                     |     ||
+| 12    | $0                   | MVRV/Z-Score <= 0.5 once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
+| 13    | $0                   | MVRV/Z-Score <= 0.5 once in a month, and deposit cash every month 25th day, 1000$ until next buy date | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
+| 14    | $0                   | MVRV/Z-Score <= 1 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | Never                               | 0%          |     |                     |     ||
+| 15    | $0                   | MVRV/Z-Score <= 1 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 7 once in a month   | 100%        |     |                     |     ||
+| 16    | $0                   | MVRV/Z-Score <= 1 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 6 once in a month   | 100%        |     |                     |     ||
+| 17    | $0                   | MVRV/Z-Score <= 1 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
+| 18    | $0                   | MVRV/Z-Score <= 1 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
 
 
 ## Data Source
@@ -49,6 +70,5 @@ Its expense ratio is 0.3372%, which is 0.6128% cheaper than QLD."
 - [Fear and Greed Index - CNN](https://edition.cnn.com/markets/fear-and-greed)
 
 #### BTC
-- [Historical price - Coingecko](https://www.coingecko.com/en/coins/bitcoin/historical_data)
-- MVRV/Z-Score 
+- [MVRV/Z-Score and Historical Price](https://charts.bitbo.io/mvrv-z-score/) 
 

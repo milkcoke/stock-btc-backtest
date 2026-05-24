@@ -325,6 +325,8 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
   .strategy-cell { display: flex; align-items: center; }
   .pos { color: #2ecc71; }
   .neg { color: #e74c3c; }
+  tbody tr { transition: opacity 0.2s; }
+  tbody tr.row-hidden { opacity: 0.25; }
 </style>
 </head>
 <body>
@@ -334,7 +336,7 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
 <div class="section">
   <h2>{{.Symbol}}</h2>
   <canvas id="chart-{{.Symbol}}"></canvas>
-  <table>
+  <table id="table-{{.Symbol}}">
     <thead>
       <tr>
         <th>Strategy</th>
@@ -345,13 +347,13 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
       </tr>
     </thead>
     <tbody>
-    {{range .Rows}}
-      <tr>
-        <td><span class="strategy-cell"><span class="dot" style="background:{{.Color}}"></span>{{.StrategyName}}</span></td>
-        <td>{{formatUSD .TotalInvested}}</td>
-        <td>{{formatUSD .FinalValue}}</td>
-        <td class="{{if ge .ReturnPct 0.0}}pos{{else}}neg{{end}}">{{printf "%.2f%%" .ReturnPct}}</td>
-        <td class="neg">{{printf "%.2f%%" .MDD}}</td>
+    {{range $i, $row := .Rows}}
+      <tr data-idx="{{$i}}">
+        <td><span class="strategy-cell"><span class="dot" style="background:{{$row.Color}}"></span>{{$row.StrategyName}}</span></td>
+        <td>{{formatUSD $row.TotalInvested}}</td>
+        <td>{{formatUSD $row.FinalValue}}</td>
+        <td class="{{if ge $row.ReturnPct 0.0}}pos{{else}}neg{{end}}">{{printf "%.2f%%" $row.ReturnPct}}</td>
+        <td class="neg">{{printf "%.2f%%" $row.MDD}}</td>
       </tr>
     {{end}}
     </tbody>
@@ -369,7 +371,16 @@ new Chart(document.getElementById('chart-{{.Symbol}}'), {
     responsive: true,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { labels: { color: '#ccc', boxWidth: 14, font: { size: 11 } } },
+      legend: {
+        labels: { color: '#ccc', boxWidth: 14, font: { size: 11 } },
+        onClick(e, item, legend) {
+          Chart.defaults.plugins.legend.onClick.call(this, e, item, legend);
+          const idx = item.datasetIndex;
+          const symbol = legend.chart.canvas.id.replace('chart-', '');
+          const row = document.querySelector('#table-' + symbol + ' tbody tr[data-idx="' + idx + '"]');
+          if (row) row.classList.toggle('row-hidden', !legend.chart.isDatasetVisible(idx));
+        }
+      },
       tooltip: {
         callbacks: {
           label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString(undefined, {maximumFractionDigits: 0})
