@@ -391,7 +391,7 @@ new Chart(document.getElementById('chart-{{.Symbol}}'), {
     scales: {
       x: { ticks: { color: '#888', maxTicksLimit: 20, maxRotation: 45 }, grid: { color: '#2a2a3e' } },
       y: {
-        type: 'logarithmic',
+        type: 'linear',
         ticks: { color: '#888', callback: v => '$' + v.toLocaleString() },
         grid: { color: '#2a2a3e' }
       }
