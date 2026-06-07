@@ -149,3 +149,165 @@ func Stock(symbol, path string) error {
 func ftos(v float64) string {
 	return strconv.FormatFloat(v, 'f', 4, 64)
 }
+
+// USDKRWCombined fetches USD/KRW from Yahoo Finance and USDT/KRW from Upbit,
+// then writes a single CSV with columns Date, usd_krw, usdt_krw.
+// Every calendar day from start to end is included; missing usd_krw values
+// (weekends/holidays) are forward-filled from the previous trading day.
+// Dates with no Upbit data have an empty usdt_krw value.
+func USDKRWCombined(path string, start, end time.Time) error {
+	// Fetch one week before start so forward-fill has an initial value even when
+	// the start date itself is a weekend or holiday.
+	usdKRW, err := fetchYahooUSDKRW(start.AddDate(0, 0, -7), end)
+	if err != nil {
+		return fmt.Errorf("yahoo USD/KRW: %w", err)
+	}
+
+	usdtKRW, err := fetchUpbitUSDTKRW(start, end)
+	if err != nil {
+		return fmt.Errorf("upbit USDT/KRW: %w", err)
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	w := csv.NewWriter(f)
+	defer w.Flush()
+
+	w.Write([]string{"Date", "usd_krw", "usdt_krw"})
+
+	// Seed lastUSD from the lookback window before the requested start date.
+	var lastUSD float64
+	for d := start.AddDate(0, 0, -7); d.Before(start); d = d.AddDate(0, 0, 1) {
+		if v, ok := usdKRW[d.Format("2006-01-02")]; ok {
+			lastUSD = v
+		}
+	}
+
+	for d := start; !d.After(end); d = d.AddDate(0, 0, 1) {
+		date := d.Format("2006-01-02")
+		if v, ok := usdKRW[date]; ok {
+			lastUSD = v
+		}
+		usdt := ""
+		if v, ok := usdtKRW[date]; ok {
+			usdt = ftos(v)
+		}
+		if lastUSD != 0 {
+			w.Write([]string{date, ftos(lastUSD), usdt})
+		}
+	}
+	return nil
+}
+
+func fetchYahooUSDKRW(start, end time.Time) (prices map[string]float64, err error) {
+	url := fmt.Sprintf(
+		"https://query1.finance.yahoo.com/v8/finance/chart/KRW%%3DX?interval=1d&period1=%d&period2=%d",
+		start.Unix(), end.Unix(),
+	)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var data yahooResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+	if len(data.Chart.Result) == 0 {
+		return nil, fmt.Errorf("no data returned from Yahoo Finance for KRW=X")
+	}
+
+	result := data.Chart.Result[0]
+	adjCloseSlice := result.Indicators.AdjClose[0].AdjClose
+	prices = make(map[string]float64)
+
+	for i, ts := range result.Timestamp {
+		if adjCloseSlice[i] == nil {
+			continue
+		}
+		date := time.Unix(ts, 0).UTC()
+		if date.Before(start) || date.After(end) {
+			continue
+		}
+		prices[date.Format("2006-01-02")] = *adjCloseSlice[i]
+	}
+	return prices, nil
+}
+
+type upbitCandle struct {
+	DateTimeUTC string  `json:"candle_date_time_utc"`
+	TradePrice  float64 `json:"trade_price"`
+}
+
+func fetchUpbitUSDTKRW(start, end time.Time) (map[string]float64, error) {
+	prices := make(map[string]float64)
+	cursor := end.AddDate(0, 0, 1)
+
+	for {
+		candles, err := fetchUpbitCandles(cursor, 200)
+		if err != nil {
+			return nil, err
+		}
+		if len(candles) == 0 {
+			break
+		}
+
+		done := false
+		for _, c := range candles {
+			t, err := time.Parse("2006-01-02T15:04:05", c.DateTimeUTC)
+			if err != nil {
+				return nil, fmt.Errorf("parse upbit date %q: %w", c.DateTimeUTC, err)
+			}
+			if t.Before(start) {
+				done = true
+				break
+			}
+			prices[t.Format("2006-01-02")] = c.TradePrice
+		}
+
+		if done || len(candles) < 200 {
+			break
+		}
+
+		oldest, _ := time.Parse("2006-01-02T15:04:05", candles[len(candles)-1].DateTimeUTC)
+		cursor = oldest
+	}
+	return prices, nil
+}
+
+func fetchUpbitCandles(to time.Time, count int) ([]upbitCandle, error) {
+	url := fmt.Sprintf(
+		"https://api.upbit.com/v1/candles/days?market=KRW-USDT&count=%d&to=%s",
+		count, to.UTC().Format("2006-01-02T15:04:05Z"),
+	)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var candles []upbitCandle
+	if err := json.NewDecoder(resp.Body).Decode(&candles); err != nil {
+		return nil, fmt.Errorf("decode upbit response: %w", err)
+	}
+	return candles, nil
+}
