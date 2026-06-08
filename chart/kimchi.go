@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"math"
 	"os"
+	"sort"
 
 	"stock-btc-backtest/loader"
 )
@@ -17,6 +18,8 @@ type kimchiData struct {
 	PctData    template.JS
 	AvgWon     float64
 	AvgPct     float64
+	MedianWon  float64
+	MedianPct  float64
 	MaxWon     float64
 	MaxPct     float64
 	MinWon     float64
@@ -36,6 +39,8 @@ func GenerateKimchi(outputPath string, records []loader.KimchiRecord) error {
 	maxPct, minPct := math.Inf(-1), math.Inf(1)
 	var sumWon, sumPct float64
 	maxWonDate, minWonDate := "", ""
+	rawWon := make([]float64, len(records))
+	rawPct := make([]float64, len(records))
 
 	for i, r := range records {
 		labels[i] = r.Date
@@ -43,6 +48,8 @@ func GenerateKimchi(outputPath string, records []loader.KimchiRecord) error {
 		usdtData[i] = math.Round(r.USDTKRW*100) / 100
 		wonData[i] = math.Round(r.PremiumWon*100) / 100
 		pctData[i] = math.Round(r.PremiumPct*10000) / 10000
+		rawWon[i] = r.PremiumWon
+		rawPct[i] = r.PremiumPct
 		sumWon += r.PremiumWon
 		sumPct += r.PremiumPct
 		if r.PremiumWon > maxWon {
@@ -62,6 +69,8 @@ func GenerateKimchi(outputPath string, records []loader.KimchiRecord) error {
 	}
 
 	n := float64(len(records))
+	sort.Float64s(rawWon)
+	sort.Float64s(rawPct)
 	labelsJSON, _ := json.Marshal(labels)
 	usdJSON, _ := json.Marshal(usdData)
 	usdtJSON, _ := json.Marshal(usdtData)
@@ -76,6 +85,8 @@ func GenerateKimchi(outputPath string, records []loader.KimchiRecord) error {
 		PctData:    template.JS(pctJSON),
 		AvgWon:     sumWon / n,
 		AvgPct:     sumPct / n,
+		MedianWon:  median(rawWon),
+		MedianPct:  median(rawPct),
 		MaxWon:     maxWon,
 		MaxPct:     maxPct,
 		MinWon:     minWon,
@@ -90,6 +101,17 @@ func GenerateKimchi(outputPath string, records []loader.KimchiRecord) error {
 	}
 	defer f.Close()
 	return kimchiTemplate.Execute(f, d)
+}
+
+func median(sorted []float64) float64 {
+	n := len(sorted)
+	if n == 0 {
+		return 0
+	}
+	if n%2 == 0 {
+		return (sorted[n/2-1] + sorted[n/2]) / 2
+	}
+	return sorted[n/2]
 }
 
 var kimchiTemplate = template.Must(template.New("kimchi").Funcs(funcMap).Parse(`<!DOCTYPE html>
@@ -126,6 +148,11 @@ var kimchiTemplate = template.Must(template.New("kimchi").Funcs(funcMap).Parse(`
       <div class="label">Average Premium</div>
       <div class="val neu">{{printf "%.2f" .AvgWon}} ₩</div>
       <div class="sub">{{printf "%.4f" .AvgPct}}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Median Premium (p50)</div>
+      <div class="val neu">{{printf "%.2f" .MedianWon}} ₩</div>
+      <div class="sub">{{printf "%.4f" .MedianPct}}%</div>
     </div>
     <div class="stat-card">
       <div class="label">Max Premium</div>

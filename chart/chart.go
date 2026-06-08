@@ -42,6 +42,8 @@ type tableRow struct {
 	FinalValue    float64
 	ReturnPct     float64
 	MDD           float64
+	TradeCount    int
+	AvgHoldDays   float64
 }
 
 type chartSection struct {
@@ -123,6 +125,8 @@ func Generate(outputPath string, tickers []TickerChart, start, end time.Time) er
 				FinalValue:    r.FinalValue,
 				ReturnPct:     r.ReturnPct(),
 				MDD:           r.MDD,
+				TradeCount:    r.TradeCount,
+				AvgHoldDays:   r.AvgHoldDays,
 			}
 		}
 
@@ -322,10 +326,18 @@ func formatNum(v float64) string {
 	return string(out)
 }
 
+func formatDays(v float64) string {
+	if v == 0 {
+		return "-"
+	}
+	return fmt.Sprintf("%.0fd", v)
+}
+
 var funcMap = template.FuncMap{
-	"printf":    fmt.Sprintf,
-	"formatUSD": formatUSD,
-	"formatNum": formatNum,
+	"printf":     fmt.Sprintf,
+	"formatUSD":  formatUSD,
+	"formatNum":  formatNum,
+	"formatDays": formatDays,
 }
 
 // ── HTML templates ────────────────────────────────────────────────────────────
@@ -371,6 +383,8 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
         <th>Final Value ({{.CurrencyLabel}})</th>
         <th>Return (%)</th>
         <th>MDD (%)</th>
+        <th>Trades</th>
+        <th>Avg Period</th>
       </tr>
     </thead>
     <tbody>
@@ -382,6 +396,8 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
         <td>{{$cur}}{{formatNum $row.FinalValue}}</td>
         <td class="{{if ge $row.ReturnPct 0.0}}pos{{else}}neg{{end}}">{{printf "%.2f%%" $row.ReturnPct}}</td>
         <td class="neg">{{printf "%.2f%%" $row.MDD}}</td>
+        <td>{{$row.TradeCount}}</td>
+        <td>{{formatDays $row.AvgHoldDays}}</td>
       </tr>
     {{end}}
     </tbody>

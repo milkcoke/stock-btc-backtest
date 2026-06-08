@@ -21,6 +21,8 @@ type Result struct {
 	MDD           float64 // Maximum Drawdown in percent (negative value)
 	MDDDate       string  // month when the trough occurred (YYYY-MM)
 	History       []DataPoint
+	TradeCount    int     // total buy + sell events
+	AvgHoldDays   float64 // avg days from position open to close; 0 if no complete cycles
 }
 
 func (r Result) ReturnPct() float64 {
@@ -53,6 +55,12 @@ func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
 	var history []DataPoint
 	var lastMonthKey int
 
+	var tradeCount int
+	var positionOpenDate time.Time
+	var totalHoldDays float64
+	var completeCycles int
+	const eps = 1e-9
+
 	for _, pr := range b.prices {
 		if pr.Date.Before(start) || pr.Date.After(end) {
 			continue
@@ -61,11 +69,32 @@ func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
 		if !ok {
 			fg = math.NaN()
 		}
+
+		sharesBefore := p.Shares
 		s.OnDay(pr.Date, pr.AdjClose, fg, p)
+		sharesAfter := p.Shares // capture before extraDailyER (which is not a trade)
+
 		if b.extraDailyER != 0 {
 			p.Shares *= (1 - b.extraDailyER)
 		}
 		lastPrice = pr.AdjClose
+
+		// Detect buy: shares increased
+		if sharesAfter > sharesBefore+eps {
+			tradeCount++
+			if positionOpenDate.IsZero() {
+				positionOpenDate = pr.Date
+			}
+		}
+		// Detect sell: shares cleared to zero
+		if sharesAfter < eps && sharesBefore > eps {
+			tradeCount++
+			if !positionOpenDate.IsZero() {
+				totalHoldDays += pr.Date.Sub(positionOpenDate).Hours() / 24
+				completeCycles++
+				positionOpenDate = time.Time{}
+			}
+		}
 
 		value := p.TotalValue(pr.AdjClose)
 		if value > peak {
@@ -87,6 +116,11 @@ func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
 		}
 	}
 
+	var avgHoldDays float64
+	if completeCycles > 0 {
+		avgHoldDays = totalHoldDays / float64(completeCycles)
+	}
+
 	return Result{
 		StrategyName:  s.Name(),
 		TotalInvested: p.TotalInvested,
@@ -94,5 +128,7 @@ func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
 		MDD:           mdd,
 		MDDDate:       mddDate,
 		History:       history,
+		TradeCount:    tradeCount,
+		AvgHoldDays:   avgHoldDays,
 	}
 }
