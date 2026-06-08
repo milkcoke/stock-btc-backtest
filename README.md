@@ -63,6 +63,65 @@ No Tax for BTC in Korea.
 | 17    | $0                   | MVRV/Z-Score <= 1 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
 | 18    | $0                   | MVRV/Z-Score <= 1 once in a month, and deposit cash every month 25th day, 1000$ until next buy date   | Save 1,000$. Buy it using all accumulated cash | MVRV/Z-Score >= 3.5 once in a month | 100%        |     |                     |     ||
 
+## USD-KRW BackTest
+Can buy Kimchi discount and sell it Kimchi premium using USD-KRW exchange rate.
+
+Kimchi premium is difference rate between USDT-KRW - USD-KRW.
+e.g. USDT-KRW 1500 won and USD-KRW 1485 won, then Kimchi premium is 15 won (1%)
+
+| Index | Initial Amount (KRW) | Buy Condition             | Buy Amount (KRW)                    | Sell Condition           | Sell Amount |
+|-------|----------------------|---------------------------|-------------------------------------|--------------------------|-------------|
+| 1     | 10,000,000           | Never                     | Never                               | Never                    | Never       |
+| 2     | 0                    | Every 25th monthly        | 10,000,000 / months period          | Never                    | Never       |
+| 3     | 0                    | Kimchi Premium <= 0%      | first 10,000,000 after current cash | Kimchi Premium >= 2%     | 100%        |
+| 4     | 0                    | Kimchi Premium <= -1%     | first 10,000,000 after current cash | Kimchi Premium >= 2%     | 100%        |
+| 5     | 0                    | Kimchi Premium <= -2%     | first 10,000,000 after current cash | Kimchi Premium >= 2%     | 100%        |
+| 6     | 0                    | Kimchi Premium <= 0%      | first 10,000,000 after current cash | Kimchi Premium >= 3%     | 100%        |
+| 7     | 0                    | Kimchi Premium <= -1%     | first 10,000,000 after current cash | Kimchi Premium >= 3%     | 100%        |
+| 8     | 0                    | Kimchi Premium <= -2%     | first 10,000,000 after current cash | Kimchi Premium >= 3%     | 100%        |
+| 9     | 0                    | Kimchi Premium <= 10 KRW  | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 10    | 0                    | Kimchi Premium <= 10 KRW  | first 10,000,000 after current cash | Kimchi Premium >= 30 KRW | 100%        |
+| 11    | 0                    | Kimchi Premium <= 10 KRW  | first 10,000,000 after current cash | Kimchi Premium >= 40 KRW | 100%        |
+| 12    | 0                    | Kimchi Premium <= 5 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 13    | 0                    | Kimchi Premium <= 4 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 14    | 0                    | Kimchi Premium <= 3 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 15    | 0                    | Kimchi Premium <= 2 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 16    | 0                    | Kimchi Premium <= 1 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 17    | 0                    | Kimchi Premium <= 0 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 18    | 0                    | Kimchi Premium <= 5 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 30 KRW | 100%        |
+| 19    | 0                    | Kimchi Premium <= 5 KRW   | first 10,000,000 after current cash | Kimchi Premium >= 40 KRW | 100%        |
+| 20    | 0                    | Kimchi Premium <= -10 KRW | first 10,000,000 after current cash | Kimchi Premium >= 10 KRW | 100%        |
+| 21    | 0                    | Kimchi Premium <= -10 KRW | first 10,000,000 after current cash | Kimchi Premium >= 21 KRW | 100%        |
+| 22    | 0                    | Kimchi Premium <= -10 KRW | first 10,000,000 after current cash | Kimchi Premium >= 30 KRW | 100%        |
+| 23    | 0                    | USD-KRW <= 1400 won       | first 10,000,000 after current cash | USD-KRW >= 1500 won      | 100%        |
+| 24    | 0                    | USD-KRW <= 1450 won       | first 10,000,000 after current cash | USD-KRW >= 1500 won      | 100%        |
+| 25    | 0                    | USD-KRW <= 1420 won       | first 10,000,000 after current cash | USD-KRW >= 1475 won      | 100%        |
+
+In Upbit, trading fee is 0.05% for both maker and taker, and the price is based on the order book's current price. So I applied 0.05% fee on the buy and sell amount.
+
+
+#### Final value calculation
+Final value is calculated like this:
+- Last day asset is KRW → final value is last sell USDT amount * USDT price of KRW
+- Last day asset is USDT → final value is evaluated last day USDT amount * USDT price of KRW
+
+
+## Metrics
+#### Avg hold days
+buy - sell period in days.
+e.g. 
+- 2025-01-01 buy, 2025-01-15 sell -> 14 days
+- 2025-02-01 buy, 2025-02-28 sell -> 27 days 
+
+Avg hold days = (14 + 27) / 2 = 20.5 days
+
+#### Trade count
+How many buy and sell count according to the conditions.
+- 2025-01-01 buy, 2025-01-15 sell -> 2 trades
+- 2025-02-01 buy, 2025-02-28 sell -> 2 trades
+
+Trade count: 4 (2 + 2)
+
 
 ## Data Source
 #### TQQQ
@@ -72,3 +131,6 @@ No Tax for BTC in Korea.
 #### BTC
 - [MVRV/Z-Score and Historical Price](https://charts.bitbo.io/mvrv-z-score/) 
 
+#### USD
+- [Historical Price - Yahoo Finance](https://finance.yahoo.com/quote/KRW%3DX/history)
+- [USDT Price - Upbit Developer](https://docs.upbit.com/docs/upbit-orderbook-currentWh)
