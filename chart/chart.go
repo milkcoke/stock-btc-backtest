@@ -17,8 +17,10 @@ var palette = []string{
 }
 
 type TickerChart struct {
-	Symbol  string
-	Results []backtester.Result
+	Symbol        string
+	Results       []backtester.Result
+	Currency      string // symbol prefix, e.g. "$" or "₩" (default "$")
+	CurrencyLabel string // column header label, e.g. "USD" or "KRW" (default "USD")
 }
 
 type dataset struct {
@@ -43,11 +45,13 @@ type tableRow struct {
 }
 
 type chartSection struct {
-	Symbol      string
-	Labels      template.JS
-	Datasets    template.JS
-	Annotations template.JS
-	Rows        []tableRow
+	Symbol        string
+	Labels        template.JS
+	Datasets      template.JS
+	Annotations   template.JS
+	Rows          []tableRow
+	Currency      string
+	CurrencyLabel string
 }
 
 // mddAnnot describes one vertical annotation line on the chart.
@@ -122,12 +126,21 @@ func Generate(outputPath string, tickers []TickerChart, start, end time.Time) er
 			}
 		}
 
+		cur, curLabel := t.Currency, t.CurrencyLabel
+		if cur == "" {
+			cur = "$"
+		}
+		if curLabel == "" {
+			curLabel = "USD"
+		}
 		sections = append(sections, chartSection{
-			Symbol:      t.Symbol,
-			Labels:      template.JS(labelsJSON),
-			Datasets:    template.JS(datasetsJSON),
-			Annotations: buildAnnotationsJS(annots),
-			Rows:        rows,
+			Symbol:        t.Symbol,
+			Labels:        template.JS(labelsJSON),
+			Datasets:      template.JS(datasetsJSON),
+			Annotations:   buildAnnotationsJS(annots),
+			Rows:          rows,
+			Currency:      cur,
+			CurrencyLabel: curLabel,
 		})
 	}
 
@@ -296,9 +309,23 @@ func formatUSD(v float64) string {
 	return "$" + string(out)
 }
 
+func formatNum(v float64) string {
+	s := fmt.Sprintf("%.0f", v)
+	n := len(s)
+	out := make([]byte, 0, n+(n-1)/3+1)
+	for i := range s {
+		if i > 0 && (n-i)%3 == 0 {
+			out = append(out, ',')
+		}
+		out = append(out, s[i])
+	}
+	return string(out)
+}
+
 var funcMap = template.FuncMap{
 	"printf":    fmt.Sprintf,
 	"formatUSD": formatUSD,
+	"formatNum": formatNum,
 }
 
 // ── HTML templates ────────────────────────────────────────────────────────────
@@ -340,18 +367,19 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
     <thead>
       <tr>
         <th>Strategy</th>
-        <th>Invested (USD)</th>
-        <th>Final Value (USD)</th>
+        <th>Invested ({{.CurrencyLabel}})</th>
+        <th>Final Value ({{.CurrencyLabel}})</th>
         <th>Return (%)</th>
         <th>MDD (%)</th>
       </tr>
     </thead>
     <tbody>
+    {{$cur := .Currency}}
     {{range $i, $row := .Rows}}
       <tr data-idx="{{$i}}">
         <td><span class="strategy-cell"><span class="dot" style="background:{{$row.Color}}"></span>{{$row.StrategyName}}</span></td>
-        <td>{{formatUSD $row.TotalInvested}}</td>
-        <td>{{formatUSD $row.FinalValue}}</td>
+        <td>{{$cur}}{{formatNum $row.TotalInvested}}</td>
+        <td>{{$cur}}{{formatNum $row.FinalValue}}</td>
         <td class="{{if ge $row.ReturnPct 0.0}}pos{{else}}neg{{end}}">{{printf "%.2f%%" $row.ReturnPct}}</td>
         <td class="neg">{{printf "%.2f%%" $row.MDD}}</td>
       </tr>
@@ -383,7 +411,7 @@ new Chart(document.getElementById('chart-{{.Symbol}}'), {
       },
       tooltip: {
         callbacks: {
-          label: ctx => ctx.dataset.label + ': $' + ctx.parsed.y.toLocaleString(undefined, {maximumFractionDigits: 0})
+          label: ctx => ctx.dataset.label + ': {{.Currency}}' + ctx.parsed.y.toLocaleString(undefined, {maximumFractionDigits: 0})
         }
       },
       annotation: { annotations: {{.Annotations}} }
@@ -392,7 +420,7 @@ new Chart(document.getElementById('chart-{{.Symbol}}'), {
       x: { ticks: { color: '#888', maxTicksLimit: 20, maxRotation: 45 }, grid: { color: '#2a2a3e' } },
       y: {
         type: 'linear',
-        ticks: { color: '#888', callback: v => '$' + v.toLocaleString() },
+        ticks: { color: '#888', callback: v => '{{.Currency}}' + v.toLocaleString() },
         grid: { color: '#2a2a3e' }
       }
     }

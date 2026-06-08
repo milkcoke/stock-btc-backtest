@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Strategy Backtest Chart</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f0f1a; color: #e0e0e0; font-family: Arial, sans-serif; padding: 24px; }
+  h1 { text-align: center; margin-bottom: 8px; font-size: 1.4rem; color: #ccc; }
+  .period { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 32px; }
+  .section { max-width: 1200px; margin: 0 auto 56px; background: #1a1a2e; border-radius: 12px; padding: 24px; }
+  .section h2 { font-size: 1.2rem; color: #ddd; margin-bottom: 20px; letter-spacing: 0.05em; }
+  table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 0.85rem; }
+  thead tr { border-bottom: 1px solid #2e2e4e; }
+  th { text-align: right; padding: 8px 12px; color: #888; font-weight: normal; }
+  th:first-child { text-align: left; }
+  td { padding: 8px 12px; text-align: right; border-bottom: 1px solid #1e1e3a; }
+  td:first-child { text-align: left; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
+  .strategy-cell { display: flex; align-items: center; }
+  .pos { color: #2ecc71; }
+  .neg { color: #e74c3c; }
+  tbody tr { transition: opacity 0.2s; }
+  tbody tr.row-hidden { opacity: 0.25; }
+</style>
+</head>
+<body>
+<h1>Strategy Portfolio Value — Monthly</h1>
+<p class="period">2025-01-01 → 2026-06-06</p>
+
+<div class="section">
+  <h2>USD-KRW</h2>
+  <canvas id="chart-USD-KRW"></canvas>
+  <table id="table-USD-KRW">
+    <thead>
+      <tr>
+        <th>Strategy</th>
+        <th>Invested (KRW)</th>
+        <th>Final Value (KRW)</th>
+        <th>Return (%)</th>
+        <th>MDD (%)</th>
+      </tr>
+    </thead>
+    <tbody>
+    
+    
+      <tr data-idx="0">
+        <td><span class="strategy-cell"><span class="dot" style="background:#e74c3c"></span>Strategy 1: Buy ₩10,000,000 of USDT on day 1, hold forever</span></td>
+        <td>₩10,000,000</td>
+        <td>₩10,175,754</td>
+        <td class="pos">1.76%</td>
+        <td class="neg">-14.62%</td>
+      </tr>
+    
+      <tr data-idx="1">
+        <td><span class="strategy-cell"><span class="dot" style="background:#e67e22"></span>Strategy 2: ₩5,000,000/17 months = ₩588235/month on 25th</span></td>
+        <td>₩10,000,000</td>
+        <td>₩10,451,945</td>
+        <td class="pos">4.52%</td>
+        <td class="neg">-8.31%</td>
+      </tr>
+    
+      <tr data-idx="2">
+        <td><span class="strategy-cell"><span class="dot" style="background:#f1c40f"></span>Strategy 3: ₩10M initial, buy on Premium &lt;= 0%, sell &gt;= 2%</span></td>
+        <td>₩10,000,000</td>
+        <td>₩10,980,869</td>
+        <td class="pos">9.81%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="3">
+        <td><span class="strategy-cell"><span class="dot" style="background:#2ecc71"></span>Strategy 4: ₩10M initial, buy on Premium &lt;= -1%, sell &gt;= 2%</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,082,864</td>
+        <td class="pos">10.83%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="4">
+        <td><span class="strategy-cell"><span class="dot" style="background:#3498db"></span>Strategy 5: ₩10M initial, buy on Premium &lt;= -2%, sell &gt;= 2%</span></td>
+        <td>₩10,000,000</td>
+        <td>₩10,982,086</td>
+        <td class="pos">9.82%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="5">
+        <td><span class="strategy-cell"><span class="dot" style="background:#9b59b6"></span>Strategy 6: ₩10M initial, buy on Premium &lt;= 0%, sell &gt;= 3%</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,839,755</td>
+        <td class="pos">18.40%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="6">
+        <td><span class="strategy-cell"><span class="dot" style="background:#1abc9c"></span>Strategy 7: ₩10M initial, buy on Premium &lt;= -1%, sell &gt;= 3%</span></td>
+        <td>₩10,000,000</td>
+        <td>₩12,096,715</td>
+        <td class="pos">20.97%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="7">
+        <td><span class="strategy-cell"><span class="dot" style="background:#e74c3c"></span>Strategy 8: ₩10M initial, buy on Premium &lt;= -2%, sell &gt;= 3%</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,821,530</td>
+        <td class="pos">18.22%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="8">
+        <td><span class="strategy-cell"><span class="dot" style="background:#e67e22"></span>Strategy 9: ₩10M initial, buy on Premium &lt;= ₩10, sell &gt;= ₩21</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,632,413</td>
+        <td class="pos">16.32%</td>
+        <td class="neg">-3.88%</td>
+      </tr>
+    
+      <tr data-idx="9">
+        <td><span class="strategy-cell"><span class="dot" style="background:#f1c40f"></span>Strategy 10: ₩10M initial, buy on Premium &lt;= ₩10, sell &gt;= ₩30</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,387,311</td>
+        <td class="pos">13.87%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="10">
+        <td><span class="strategy-cell"><span class="dot" style="background:#2ecc71"></span>Strategy 11: ₩10M initial, buy on Premium &lt;= ₩10, sell &gt;= ₩40</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,406,272</td>
+        <td class="pos">14.06%</td>
+        <td class="neg">-6.35%</td>
+      </tr>
+    
+      <tr data-idx="11">
+        <td><span class="strategy-cell"><span class="dot" style="background:#3498db"></span>Strategy 12: ₩10M initial, buy on Premium &lt;= -₩10, sell &gt;= ₩10</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,503,738</td>
+        <td class="pos">15.04%</td>
+        <td class="neg">-2.67%</td>
+      </tr>
+    
+      <tr data-idx="12">
+        <td><span class="strategy-cell"><span class="dot" style="background:#9b59b6"></span>Strategy 13: ₩10M initial, buy on Premium &lt;= -₩10, sell &gt;= ₩21</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,267,309</td>
+        <td class="pos">12.67%</td>
+        <td class="neg">-3.59%</td>
+      </tr>
+    
+      <tr data-idx="13">
+        <td><span class="strategy-cell"><span class="dot" style="background:#1abc9c"></span>Strategy 14: ₩10M initial, buy on Premium &lt;= -₩10, sell &gt;= ₩30</span></td>
+        <td>₩10,000,000</td>
+        <td>₩11,082,864</td>
+        <td class="pos">10.83%</td>
+        <td class="neg">-4.01%</td>
+      </tr>
+    
+      <tr data-idx="14">
+        <td><span class="strategy-cell"><span class="dot" style="background:#e74c3c"></span>Strategy 15: ₩10M initial, buy on USD/KRW &lt;= ₩1400, sell &gt;= ₩1500</span></td>
+        <td>₩10,000,000</td>
+        <td>₩10,205,364</td>
+        <td class="pos">2.05%</td>
+        <td class="neg">-6.49%</td>
+      </tr>
+    
+      <tr data-idx="15">
+        <td><span class="strategy-cell"><span class="dot" style="background:#e67e22"></span>Strategy 16: ₩10M initial, buy on USD/KRW &lt;= ₩1450, sell &gt;= ₩1500</span></td>
+        <td>₩10,000,000</td>
+        <td>₩10,150,308</td>
+        <td class="pos">1.50%</td>
+        <td class="neg">-14.62%</td>
+      </tr>
+    
+      <tr data-idx="16">
+        <td><span class="strategy-cell"><span class="dot" style="background:#f1c40f"></span>Strategy 17: ₩10M initial, buy on USD/KRW &lt;= ₩1420, sell &gt;= ₩1475</span></td>
+        <td>₩10,000,000</td>
+        <td>₩9,981,609</td>
+        <td class="neg">-0.18%</td>
+        <td class="neg">-11.94%</td>
+      </tr>
+    
+    </tbody>
+  </table>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3/dist/chartjs-plugin-annotation.min.js"></script>
+<script>
+
+new Chart(document.getElementById('chart-USD-KRW'), {
+  type: 'line',
+  data: { labels: ["2025-01","2025-02","2025-03","2025-04","2025-05","2025-06","2025-07","2025-08","2025-09","2025-10","2025-11","2025-12","2026-01","2026-02","2026-03","2026-04","2026-05","2026-06"], datasets: [{"label":"Strategy 1: Buy ₩10,000,000 of USDT on day 1, hold forever","data":[9995000,10470314.802411253,9974916.275954453,9944790.689886136,9650229.403884796,9446044.876088412,9188303.75083724,9332237.106496986,9345626.255860683,9506296.04822505,9974916.275954453,10021778.298727395,9713827.863362357,9874497.655726725,9767384.460817147,10135586.068318821,9928054.253181513,9774079.035498995],"borderColor":"#e74c3c","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 2: ₩5,000,000/17 months = ₩588235/month on 25th","data":[0,612618.2544970021,1183654.6398559972,1772809.1399577467,2307019.2567080245,2852677.6697412212,3362353.7266282276,4015896.9111904544,4601705.159695491,5256197.631749352,6103247.142179416,6720254.300608983,7093306.929165109,7795796.600892416,8306517.368656771,9215460.467237523,9611163.35477955,10039368.545358533],"borderColor":"#e67e22","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 3: ₩10M initial, buy on Premium \u003c= 0%, sell \u003e= 2%","data":[10000000,10000000,10000000,10000000,10021048.778487569,10063517.286185736,10063517.286185736,10302372.391913626,10317153.413996715,10533599.310870443,10533599.310870443,10533599.310870443,10364050.524947746,10465955.355298834,10465955.355298834,10937523.259474084,10713571.330118936,10547413.447048984],"borderColor":"#f1c40f","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 4: ₩10M initial, buy on Premium \u003c= -1%, sell \u003e= 2%","data":[10000000,10000000,10000000,10000000,10000000,10062106.451642007,10062106.451642007,10331291.897857158,10346114.411340455,10563167.887533097,10563167.887533097,10563167.887533097,10563167.887533097,10563167.887533097,10563167.887533097,11039115.927924203,10813083.831645703,10645382.598922944],"borderColor":"#2ecc71","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 5: ₩10M initial, buy on Premium \u003c= -2%, sell \u003e= 2%","data":[10000000,10000000,10000000,10000000,10000000,10000000,10000000,10237347.538574578,10252035.26818516,10467115.036737695,10467115.036737695,10467115.036737695,10467115.036737695,10467115.036737695,10467115.036737695,10938735.193051146,10714758.448675595,10548582.154461477],"borderColor":"#3498db","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 6: ₩10M initial, buy on Premium \u003c= 0%, sell \u003e= 3%","data":[10000000,10000000,10000000,10000000,9950132.94198895,9944480.937518846,9944480.937518846,10180510.744811038,10195116.929523822,10370391.14607724,11204641.643678837,11204641.643678837,11024291.762188267,11284566.8572243,11284566.8572243,11793019.202159306,11551550.513079425,11372396.324407255],"borderColor":"#9b59b6","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 7: ₩10M initial, buy on Premium \u003c= -1%, sell \u003e= 3%","data":[10000000,10000000,10000000,10000000,10000000,10202709.15734392,10202709.15734392,10475656.062678523,10490685.698349511,10671041.326401366,11529477.754794426,11529477.754794426,11529477.754794426,11529477.754794426,11529477.754794426,12048965.128520982,11802255.802903974,11619213.40002684],"borderColor":"#1abc9c","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 8: ₩10M initial, buy on Premium \u003c= -2%, sell \u003e= 3%","data":[10000000,10000000,10000000,10000000,10000000,10000000,10000000,10237347.538574578,10252035.26818516,10428288.023512123,11267196.05988244,11267196.05988244,11267196.05988244,11267196.05988244,11267196.05988244,11774865.72323528,11533768.736828215,11354890.32755846],"borderColor":"#e74c3c","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 9: ₩10M initial, buy on Premium \u003c= ₩10, sell \u003e= ₩21","data":[10000000,10132426.160896132,10132426.160896132,10252950.90716854,10202458.829036128,10172598.14655281,10240457.703958966,10529933.904279808,10639768.805685785,10862982.92388931,10862982.92388931,10862982.92388931,10749049.578560572,10938810.952647312,11071962.053809999,11570834.995990058,11368363.214915732,11173239.262830982],"borderColor":"#e67e22","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 10: ₩10M initial, buy on Premium \u003c= ₩10, sell \u003e= ₩30","data":[10000000,10132426.160896132,10132426.160896132,10266704.027097672,10216144.219819542,10186243.48276549,10339769.705615852,10632053.247338513,10647307.269214178,10870679.538550477,10870679.538550477,10870679.538550477,10695705.110197779,10800870.94397255,10930320.244207026,11342361.1033101,11110119.89181564,10937811.896190718],"borderColor":"#f1c40f","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 11: ₩10M initial, buy on Premium \u003c= ₩10, sell \u003e= ₩40","data":[10000000,10159554.477257298,10159554.477257298,10247603.374237591,9944072.880487032,9888891.40966128,10041548.03419343,10325401.476520894,10340215.538897537,10742228.453128122,10742228.453128122,10742228.453128122,10569321.573097803,10818855.170016902,10948520.012635762,11361246.949369803,11128619.039574252,10956024.1387582],"borderColor":"#2ecc71","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 12: ₩10M initial, buy on Premium \u003c= -₩10, sell \u003e= ₩10","data":[10000000,10000000,10000000,10000000,10000000,10155841.588776615,10155841.588776615,10427534.674404733,10807550.257767174,10807550.257767174,10807550.257767174,10807550.257767174,10807550.257767174,10807550.257767174,10807550.257767174,11221755.415153623,11221755.415153623,11049643.066579776],"borderColor":"#3498db","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 13: ₩10M initial, buy on Premium \u003c= -₩10, sell \u003e= ₩21","data":[10000000,10000000,10000000,10000000,10000000,10263997.516239624,10263997.516239624,10538584.03195963,10691994.517231181,10691994.517231181,10691994.517231181,10691994.517231181,10691994.517231181,10691994.517231181,10691994.517231181,11173747.140358057,10991122.059124134,10822547.022414356],"borderColor":"#9b59b6","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 14: ₩10M initial, buy on Premium \u003c= -₩10, sell \u003e= ₩30","data":[10000000,10000000,10000000,10000000,10000000,10062106.451642007,10062106.451642007,10331291.897857158,10346114.411340455,10563167.887533097,10563167.887533097,10563167.887533097,10563167.887533097,10563167.887533097,10563167.887533097,11039115.927924203,10813083.831645703,10645382.598922944],"borderColor":"#1abc9c","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 15: ₩10M initial, buy on USD/KRW \u003c= ₩1400, sell \u003e= ₩1500","data":[10000000,10000000,10000000,10000000,10000000,9807333.101529904,9539734.005563283,9689172.461752433,9703073.71349096,9869888.734353269,10356432.545201669,10405086.92628651,10085358.136300417,10252173.157162726,10140963.14325452,10205364.167246178,10205364.167246178,10205364.167246178],"borderColor":"#e74c3c","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 16: ₩10M initial, buy on USD/KRW \u003c= ₩1450, sell \u003e= ₩1500","data":[10000000,10648623.978201635,10144788.828337876,10114150.204359673,9814572.547683924,9606910.76294278,9344780.313351499,9491164.850136241,9504782.016348774,9668188.010899182,10144788.828337876,10192448.910081744,9879254.087193461,10042660.08174387,9933722.752043597,9996807.678814715,9996807.678814715,10150308.268624388],"borderColor":"#e67e22","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0},{"label":"Strategy 17: ₩10M initial, buy on USD/KRW \u003c= ₩1420, sell \u003e= ₩1475","data":[10000000,10157361.923326835,9676770.630279403,9647545.484080572,9655054.982399087,9450768.352525225,9192898.344323793,9336903.673579138,9350299.51816103,9511049.653143741,9979904.213509982,10026789.669546606,9981608.834733028,9981608.834733028,9981608.834733028,9981608.834733028,9981608.834733028,9981608.834733028],"borderColor":"#f1c40f","borderWidth":2,"pointRadius":0,"tension":0.1,"fill":false,"finalUSD":0}] },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        labels: { color: '#ccc', boxWidth: 14, font: { size: 11 } },
+        onClick(e, item, legend) {
+          Chart.defaults.plugins.legend.onClick.call(this, e, item, legend);
+          const idx = item.datasetIndex;
+          const symbol = legend.chart.canvas.id.replace('chart-', '');
+          const row = document.querySelector('#table-' + symbol + ' tbody tr[data-idx="' + idx + '"]');
+          if (row) row.classList.toggle('row-hidden', !legend.chart.isDatasetVisible(idx));
+        }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ctx.dataset.label + ': ₩' + ctx.parsed.y.toLocaleString(undefined, {maximumFractionDigits: 0})
+        }
+      },
+      annotation: { annotations: {"mdd0":{type:"line",xMin:"2025-07",xMax:"2025-07",borderColor:"rgba(255,255,255,0.35)",borderWidth:1,borderDash:[6,3],label:{display:true,content:"MDD 2025-07",color:"rgba(255,255,255,0.35)",font:{size:10},position:"start",backgroundColor:"rgba(0,0,0,0.5)",padding:4}},"mdd1":{type:"line",xMin:"2025-02",xMax:"2025-02",borderColor:"rgba(255,255,255,0.35)",borderWidth:1,borderDash:[6,3],label:{display:true,content:"MDD 2025-02",color:"rgba(255,255,255,0.35)",font:{size:10},position:"start",backgroundColor:"rgba(0,0,0,0.5)",padding:4}},"mdd2":{type:"line",xMin:"2026-06",xMax:"2026-06",borderColor:"rgba(255,255,255,0.35)",borderWidth:1,borderDash:[6,3],label:{display:true,content:"MDD 2026-06",color:"rgba(255,255,255,0.35)",font:{size:10},position:"start",backgroundColor:"rgba(0,0,0,0.5)",padding:4}},"mdd3":{type:"line",xMin:"2025-05",xMax:"2025-05",borderColor:"rgba(255,255,255,0.35)",borderWidth:1,borderDash:[6,3],label:{display:true,content:"MDD 2025-05",color:"rgba(255,255,255,0.35)",font:{size:10},position:"start",backgroundColor:"rgba(0,0,0,0.5)",padding:4}},"mdd4":{type:"line",xMin:"2026-02",xMax:"2026-02",borderColor:"rgba(255,255,255,0.35)",borderWidth:1,borderDash:[6,3],label:{display:true,content:"MDD 2026-02",color:"rgba(255,255,255,0.35)",font:{size:10},position:"start",backgroundColor:"rgba(0,0,0,0.5)",padding:4}}} }
+    },
+    scales: {
+      x: { ticks: { color: '#888', maxTicksLimit: 20, maxRotation: 45 }, grid: { color: '#2a2a3e' } },
+      y: {
+        type: 'linear',
+        ticks: { color: '#888', callback: v => '₩' + v.toLocaleString() },
+        grid: { color: '#2a2a3e' }
+      }
+    }
+  }
+});
+
+</script>
+</body>
+</html>

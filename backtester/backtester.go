@@ -34,14 +34,20 @@ type Backtester struct {
 	prices       []loader.PriceRecord
 	fearGreed    map[string]float64
 	extraDailyER float64 // (thisETF_TER - priceData_TER) / 365; negative means lower fees than price data
+	tradingFee   float64 // fraction deducted on each buy/sell (e.g. 0.0005 = 0.05%)
 }
 
 func New(prices []loader.PriceRecord, fearGreed map[string]float64, annualERDelta float64) *Backtester {
 	return &Backtester{prices: prices, fearGreed: fearGreed, extraDailyER: annualERDelta / 365.0}
 }
 
+func (b *Backtester) WithTradingFee(fee float64) *Backtester {
+	b.tradingFee = fee
+	return b
+}
+
 func (b *Backtester) Run(s strategy.Strategy, start, end time.Time) Result {
-	p := &portfolio.Portfolio{}
+	p := &portfolio.Portfolio{FeeRate: b.tradingFee}
 	var lastPrice, peak, mdd float64
 	var mddDate string
 	var history []DataPoint

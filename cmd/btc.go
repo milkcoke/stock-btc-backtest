@@ -45,7 +45,7 @@ func runBTC(cmd *cobra.Command, args []string) error {
 	rp.Print("BTC", results, start, end)
 
 	const chartPath = "chart_btc.html"
-	if err := chart.Generate(chartPath, []chart.TickerChart{{Symbol: "BTC", Results: results}}, start, end); err != nil {
+	if err := chart.GenerateBTC(chartPath, results, start, end); err != nil {
 		log.Fatalf("generate chart: %v", err)
 	}
 	log.Printf("chart saved → %s", chartPath)

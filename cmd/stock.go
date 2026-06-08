@@ -75,7 +75,7 @@ func runStock(cmd *cobra.Command, args []string) error {
 	}
 
 	const chartPath = "chart_stock.html"
-	if err := chart.Generate(chartPath, tickerCharts, start, end); err != nil {
+	if err := chart.GenerateStock(chartPath, tickerCharts, start, end); err != nil {
 		log.Fatalf("generate chart: %v", err)
 	}
 	log.Printf("chart saved → %s", chartPath)
@@ -91,7 +91,7 @@ func runStock(cmd *cobra.Command, args []string) error {
 	}
 	strategyName := tickerCharts[0].Results[strategy3Idx].StrategyName
 	const compPath = "chart_stock_strategy3.html"
-	if err := chart.GenerateComparison(compPath, strategyName, compLines, start, end); err != nil {
+	if err := chart.GenerateStockComparison(compPath, strategyName, compLines, start, end); err != nil {
 		log.Fatalf("generate comparison chart: %v", err)
 	}
 	log.Printf("comparison chart saved → %s", compPath)
