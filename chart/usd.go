@@ -14,3 +14,12 @@ func GenerateUSD(outputPath string, results []backtester.Result, start, end time
 		CurrencyLabel: "KRW",
 	}}, start, end)
 }
+
+func GenerateUSDKorean(outputPath string, results []backtester.Result, start, end time.Time) error {
+	return GenerateKorean(outputPath, []TickerChart{{
+		Symbol:        "USD-KRW",
+		Results:       results,
+		Currency:      "₩",
+		CurrencyLabel: "KRW",
+	}}, start, end)
+}

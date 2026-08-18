@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -85,6 +86,11 @@ func PLTR(path string) error { return Stock("PLTR", path) }
 func IREN(path string) error { return Stock("IREN", path) }
 func RKLB(path string) error { return Stock("RKLB", path) }
 
+// KIH is Korea Investment Holdings (한국금융지주), KOSPI code 071050.
+// Yahoo Finance appends ".KS" for KOSPI listings (".KQ" for KOSDAQ).
+// Prices are quoted in KRW, not USD.
+func KIH(path string) error { return Stock("071050.KS", path) }
+
 func Stock(symbol, path string) error {
 	period1 := time.Date(1999, 1, 1, 0, 0, 0, 0, time.UTC).Unix()
 	period2 := time.Now().Unix()
@@ -148,6 +154,151 @@ func Stock(symbol, path string) error {
 
 func ftos(v float64) string {
 	return strconv.FormatFloat(v, 'f', 4, 64)
+}
+
+type fearGreedResponse struct {
+	Historical struct {
+		Data []struct {
+			X float64 `json:"x"` // epoch milliseconds
+			Y float64 `json:"y"` // index value
+		} `json:"data"`
+	} `json:"fear_and_greed_historical"`
+}
+
+// FearGreed refreshes the CNN Fear & Greed CSV in place. CNN only serves a
+// rolling window of history, so existing rows are kept and only the overlap is
+// rewritten: CNN restates the most recent days as its inputs settle, and the
+// final point of the series is the current intraday reading, which replaces the
+// day's earlier value. Rows are written back with CRLF endings to match the
+// existing file.
+func FearGreed(path string) error {
+	dates, values, err := readFearGreedCSV(path)
+	if err != nil {
+		return err
+	}
+
+	// Re-fetch a margin before the last stored date so restated values are picked up.
+	anchor := time.Date(2011, 1, 1, 0, 0, 0, 0, time.UTC)
+	if len(dates) > 0 {
+		if last, err := time.Parse("2006-01-02", dates[len(dates)-1]); err == nil {
+			anchor = last.AddDate(0, 0, -30)
+		}
+	}
+
+	fresh, err := fetchFearGreed(anchor)
+	if err != nil {
+		return err
+	}
+
+	for _, date := range fresh.dates {
+		if _, ok := values[date]; !ok {
+			dates = append(dates, date)
+		}
+		values[date] = fresh.values[date]
+	}
+	sort.Strings(dates)
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := fmt.Fprint(f, "Date,Fear Greed Index\r\n"); err != nil {
+		return err
+	}
+	for _, date := range dates {
+		if _, err := fmt.Fprintf(f, "%s,%s\r\n", date, strconv.FormatFloat(values[date], 'f', -1, 64)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// readFearGreedCSV returns the stored dates in file order plus a date→value
+// lookup. A missing file yields empty results so the CSV can be built fresh.
+func readFearGreedCSV(path string) ([]string, map[string]float64, error) {
+	values := make(map[string]float64)
+
+	f, err := os.Open(path)
+	if os.IsNotExist(err) {
+		return nil, values, nil
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	defer f.Close()
+
+	r := csv.NewReader(f)
+	r.FieldsPerRecord = -1
+	rows, err := r.ReadAll()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	var dates []string
+	for i, row := range rows {
+		if i == 0 || len(row) < 2 {
+			continue
+		}
+		date := strings.TrimSpace(row[0])
+		v, err := strconv.ParseFloat(strings.TrimSpace(row[1]), 64)
+		if err != nil {
+			return nil, nil, fmt.Errorf("row %d fear greed value: %w", i+1, err)
+		}
+		if _, seen := values[date]; !seen {
+			dates = append(dates, date)
+		}
+		values[date] = v
+	}
+	return dates, values, nil
+}
+
+type fearGreedSeries struct {
+	dates  []string
+	values map[string]float64
+}
+
+func fetchFearGreed(from time.Time) (fearGreedSeries, error) {
+	url := "https://production.dataviz.cnn.io/index/fearandgreed/graphdata/" + from.Format("2006-01-02")
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return fearGreedSeries{}, err
+	}
+	// CNN's dataviz host rejects requests that do not look like the web client.
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36")
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Referer", "https://edition.cnn.com/")
+	req.Header.Set("Origin", "https://edition.cnn.com")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fearGreedSeries{}, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fearGreedSeries{}, fmt.Errorf("cnn fear & greed: HTTP %d", resp.StatusCode)
+	}
+
+	var data fearGreedResponse
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		return fearGreedSeries{}, fmt.Errorf("decode cnn response: %w", err)
+	}
+	if len(data.Historical.Data) == 0 {
+		return fearGreedSeries{}, fmt.Errorf("no data returned from CNN fear & greed")
+	}
+
+	series := fearGreedSeries{values: make(map[string]float64)}
+	for _, p := range data.Historical.Data {
+		date := time.UnixMilli(int64(p.X)).UTC().Format("2006-01-02")
+		if _, seen := series.values[date]; !seen {
+			series.dates = append(series.dates, date)
+		}
+		series.values[date] = p.Y
+	}
+	return series, nil
 }
 
 // USDKRWCombined fetches USD/KRW from Yahoo Finance and USDT/KRW from Upbit,

@@ -4,13 +4,14 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/spf13/cobra"
 	"stock-btc-backtest/backtester"
 	"stock-btc-backtest/chart"
 	"stock-btc-backtest/downloader"
 	"stock-btc-backtest/loader"
 	"stock-btc-backtest/reporter"
 	"stock-btc-backtest/strategy"
+
+	"github.com/spf13/cobra"
 )
 
 const fearGreedCSV = "data/cnn_fear_greed.csv"
@@ -28,23 +29,33 @@ func runStock(cmd *cobra.Command, args []string) error {
 	}
 
 	years := end.Year() - start.Year()
-	lumpSum := float64(years) * 12_000
 
+	// Each ticker is backtested in the currency it is quoted in — Korean listings
+	// stay in KRW and are never converted to USD. monthly is the contribution in
+	// that same currency, sized so the strategies are comparable in real terms.
 	tickerConfigs := []struct {
-		symbol  string
-		path    string
-		color   string
-		erDelta float64
-		dl      func(string) error
+		symbol        string
+		path          string
+		color         string
+		erDelta       float64
+		currency      string
+		currencyLabel string
+		monthly       float64
+		dl            func(string) error
 	}{
-		{"TQQQ", "data/tqqq.csv", "#e74c3c", 0, downloader.TQQQ},
-		{"QLD", "data/qld.csv", "#e67e22", 0, downloader.QLD},
-		{"QQQ", "data/qqq.csv", "#3498db", 0, downloader.QQQ},
+		{"TQQQ", "data/tqqq.csv", "#e74c3c", 0, "$", "USD", 1_000, downloader.TQQQ},
+		{"QLD", "data/qld.csv", "#e67e22", 0, "$", "USD", 1_000, downloader.QLD},
+		{"QQQ", "data/qqq.csv", "#3498db", 0, "$", "USD", 1_000, downloader.QQQ},
+		// KIH: 한국금융지주 (Korea Investment Holdings), KOSPI 071050 — quoted in KRW.
+		{"KIH", "data/kih.csv", "#9b59b6", 0, "₩", "KRW", 1_000_000, downloader.KIH},
 		// KQLD: 2x QQQ Korean ETF, uses QLD price data; TER 0.3372% vs QLD's 0.95% → lower fees
-		//{"KQLD", "data/qld.csv", "#2ecc71", 0.003372 - 0.0095, nil},
+		//{"KQLD", "data/qld.csv", "#2ecc71", 0.003372 - 0.0095, "$", "USD", 1_000, nil},
 	}
 
-	rp := reporter.Reporter{}
+	if err := downloader.EnsureUpToDate(fearGreedCSV, downloader.FearGreed); err != nil {
+		log.Fatalf("update CNN Fear & Greed failed: %v", err)
+	}
+
 	var tickerCharts []chart.TickerChart
 
 	for _, t := range tickerConfigs {
@@ -62,15 +73,18 @@ func runStock(cmd *cobra.Command, args []string) error {
 		}
 
 		bt := backtester.New(prices, indicator, t.erDelta)
-		strats := buildStockStrategies(lumpSum, years)
+		strats := buildStockStrategies(t.currency, t.monthly, years)
 		results := make([]backtester.Result, len(strats))
 		for i, s := range strats {
 			results[i] = bt.Run(s, start, end)
 		}
-		rp.Print(t.symbol, results, start, end)
+		reporter.Reporter{Currency: t.currency, CurrencyLabel: t.currencyLabel}.
+			Print(t.symbol, results, start, end)
 		tickerCharts = append(tickerCharts, chart.TickerChart{
-			Symbol:  t.symbol,
-			Results: results,
+			Symbol:        t.symbol,
+			Results:       results,
+			Currency:      t.currency,
+			CurrencyLabel: t.currencyLabel,
 		})
 	}
 
@@ -84,9 +98,10 @@ func runStock(cmd *cobra.Command, args []string) error {
 	var compLines []chart.ComparisonLine
 	for i, t := range tickerConfigs {
 		compLines = append(compLines, chart.ComparisonLine{
-			Label:  t.symbol,
-			Color:  t.color,
-			Result: tickerCharts[i].Results[strategy3Idx],
+			Label:    t.symbol,
+			Color:    t.color,
+			Currency: t.currency,
+			Result:   tickerCharts[i].Results[strategy3Idx],
 		})
 	}
 	strategyName := tickerCharts[0].Results[strategy3Idx].StrategyName
@@ -98,46 +113,69 @@ func runStock(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func buildStockStrategies(lumpSum float64, years int) []strategy.Strategy {
+// buildStockStrategies builds the strategy set for one ticker. cur is the
+// currency symbol the ticker is quoted in and monthly the contribution in that
+// currency; every amount below is derived from monthly so the same strategies
+// run at USD scale for US listings and KRW scale for Korean ones.
+func buildStockStrategies(cur string, monthly float64, years int) []strategy.Strategy {
+	annual := monthly * 12
+	lumpSum := annual * float64(years)
+	m := money(cur, monthly)
+
 	return []strategy.Strategy{
 		&strategy.LumpSumStrategy{
-			Label:  fmt.Sprintf("Strategy 1: Lump-sum $%.0f (%d yrs × $12,000) on day 1", lumpSum, years),
+			Label: fmt.Sprintf("Strategy 1: Lump-sum %s (%d yrs × %s) on day 1",
+				money(cur, lumpSum), years, money(cur, annual)),
 			Amount: lumpSum,
 		},
 		&strategy.AnnualDCAStrategy{
+			Label:         fmt.Sprintf("Strategy 2: %s every Jan 1st", money(cur, annual)),
 			InitialAmount: 0,
-			AnnualAmount:  12_000,
+			AnnualAmount:  annual,
 		},
 		&strategy.MonthlyDCAStrategy{
-			Label:         "Strategy 3: $1,000 on 25th monthly",
+			Label:         fmt.Sprintf("Strategy 3: %s on 25th monthly", m),
 			InitialAmount: 0,
-			MonthlyAmount: 1_000,
+			MonthlyAmount: monthly,
 			DayOfMonth:    25,
 		},
 		&strategy.FearGreedAccumStrategy{
-			Label:         "Strategy 4: Save $1,000/month, buy all on F&G <= 24",
+			Label:         fmt.Sprintf("Strategy 4: Save %s/month, buy all on F&G <= 24", m),
 			InitialAmount: 0,
-			MonthlyAmount: 1_000,
+			MonthlyAmount: monthly,
 			BuyThreshold:  24,
 			SellThreshold: 0,
 		},
 		&strategy.FearGreedTieredStrategy{
-			Label:         "Strategy 5: Save $1,000/month, tiered buy",
-			MonthlyAmount: 1_000,
+			Label:         fmt.Sprintf("Strategy 5: Save %s/month, tiered buy", m),
+			MonthlyAmount: monthly,
 		},
 		&strategy.FearGreedAccumStrategy{
-			Label:         "Strategy 6: Save $1,000/month, buy all on F&G <= 24, sell on Greed >= 76",
+			Label:         fmt.Sprintf("Strategy 6: Save %s/month, buy all on F&G <= 24, sell on Greed >= 76", m),
 			InitialAmount: 0,
-			MonthlyAmount: 1_000,
+			MonthlyAmount: monthly,
 			BuyThreshold:  24,
 			SellThreshold: 76,
 		},
 		&strategy.FearGreedAccumStrategy{
-			Label:         "Strategy 7: Save $1,000/month, buy all on F&G <= 24, sell on Greed >= 60",
+			Label:         fmt.Sprintf("Strategy 7: Save %s/month, buy all on F&G <= 24, sell on Greed >= 60", m),
 			InitialAmount: 0,
-			MonthlyAmount: 1_000,
+			MonthlyAmount: monthly,
 			BuyThreshold:  24,
 			SellThreshold: 60,
 		},
 	}
+}
+
+// money renders a whole amount with thousands separators, e.g. "₩1,000,000".
+func money(cur string, v float64) string {
+	s := fmt.Sprintf("%.0f", v)
+	out := make([]byte, 0, len(s)+len(s)/3)
+	for i := range s {
+		if i > 0 && (len(s)-i)%3 == 0 {
+			out = append(out, ',')
+		}
+		out = append(out, s[i])
+	}
+	return cur + string(out)
 }

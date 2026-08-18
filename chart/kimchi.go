@@ -10,6 +10,40 @@ import (
 	"stock-btc-backtest/loader"
 )
 
+// KimchiI18n holds translatable UI strings for the kimchi premium chart.
+type KimchiI18n struct {
+	PageTitle   string
+	H1          string
+	PremiumH2   string
+	RateH2      string
+	AvgLabel    string
+	MedianLabel string
+	MaxLabel    string
+	MinLabel    string
+}
+
+var EnglishKimchiI18n = KimchiI18n{
+	PageTitle:   "Kimchi Premium",
+	H1:          "Kimchi Premium — Daily",
+	PremiumH2:   "Kimchi Premium",
+	RateH2:      "Exchange Rate",
+	AvgLabel:    "Average Premium",
+	MedianLabel: "Median Premium (p50)",
+	MaxLabel:    "Max Premium",
+	MinLabel:    "Min Premium",
+}
+
+var KoreanKimchiI18n = KimchiI18n{
+	PageTitle:   "김치 프리미엄",
+	H1:          "김치 프리미엄 — 일별",
+	PremiumH2:   "김치 프리미엄",
+	RateH2:      "환율",
+	AvgLabel:    "평균 프리미엄",
+	MedianLabel: "중간값 프리미엄 (p50)",
+	MaxLabel:    "최대 프리미엄",
+	MinLabel:    "최소 프리미엄",
+}
+
 type kimchiData struct {
 	Labels     template.JS
 	USDData    template.JS
@@ -26,9 +60,18 @@ type kimchiData struct {
 	MinPct     float64
 	MaxWonDate string
 	MinWonDate string
+	I18n       KimchiI18n
 }
 
 func GenerateKimchi(outputPath string, records []loader.KimchiRecord) error {
+	return generateKimchi(outputPath, records, EnglishKimchiI18n)
+}
+
+func GenerateKimchiKorean(outputPath string, records []loader.KimchiRecord) error {
+	return generateKimchi(outputPath, records, KoreanKimchiI18n)
+}
+
+func generateKimchi(outputPath string, records []loader.KimchiRecord, i18n KimchiI18n) error {
 	labels := make([]string, len(records))
 	usdData := make([]float64, len(records))
 	usdtData := make([]float64, len(records))
@@ -93,6 +136,7 @@ func GenerateKimchi(outputPath string, records []loader.KimchiRecord) error {
 		MinPct:     minPct,
 		MaxWonDate: maxWonDate,
 		MinWonDate: minWonDate,
+		I18n:       i18n,
 	}
 
 	f, err := os.Create(outputPath)
@@ -118,7 +162,7 @@ var kimchiTemplate = template.Must(template.New("kimchi").Funcs(funcMap).Parse(`
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Kimchi Premium</title>
+<title>{{.I18n.PageTitle}}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0f0f1a; color: #e0e0e0; font-family: Arial, sans-serif; padding: 24px; }
@@ -137,30 +181,30 @@ var kimchiTemplate = template.Must(template.New("kimchi").Funcs(funcMap).Parse(`
 </style>
 </head>
 <body>
-<h1>Kimchi Premium — Daily</h1>
+<h1>{{.I18n.H1}}</h1>
 <p class="subtitle">USDT/KRW (Upbit) − USD/KRW (Yahoo Finance)</p>
 
 <div class="section">
-  <h2>Kimchi Premium</h2>
+  <h2>{{.I18n.PremiumH2}}</h2>
   <canvas id="chart-premium"></canvas>
   <div class="stats">
     <div class="stat-card">
-      <div class="label">Average Premium</div>
+      <div class="label">{{.I18n.AvgLabel}}</div>
       <div class="val neu">{{printf "%.2f" .AvgWon}} ₩</div>
       <div class="sub">{{printf "%.4f" .AvgPct}}%</div>
     </div>
     <div class="stat-card">
-      <div class="label">Median Premium (p50)</div>
+      <div class="label">{{.I18n.MedianLabel}}</div>
       <div class="val neu">{{printf "%.2f" .MedianWon}} ₩</div>
       <div class="sub">{{printf "%.4f" .MedianPct}}%</div>
     </div>
     <div class="stat-card">
-      <div class="label">Max Premium</div>
+      <div class="label">{{.I18n.MaxLabel}}</div>
       <div class="val pos">{{printf "%.2f" .MaxWon}} ₩</div>
       <div class="sub">{{printf "%.4f" .MaxPct}}% · {{.MaxWonDate}}</div>
     </div>
     <div class="stat-card">
-      <div class="label">Min Premium</div>
+      <div class="label">{{.I18n.MinLabel}}</div>
       <div class="val neg">{{printf "%.2f" .MinWon}} ₩</div>
       <div class="sub">{{printf "%.4f" .MinPct}}% · {{.MinWonDate}}</div>
     </div>
@@ -168,7 +212,7 @@ var kimchiTemplate = template.Must(template.New("kimchi").Funcs(funcMap).Parse(`
 </div>
 
 <div class="section">
-  <h2>Exchange Rate</h2>
+  <h2>{{.I18n.RateH2}}</h2>
   <canvas id="chart-rate"></canvas>
 </div>
 

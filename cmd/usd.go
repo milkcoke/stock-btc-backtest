@@ -16,7 +16,9 @@ import (
 
 const usdKRWCSV = "data/usd_krw.csv"
 const kimchiChartPath = "chart_kimchi.html"
+const kimchiChartKoPath = "chart_kimchi_ko.html"
 const usdBacktestChartPath = "chart_usd.html"
+const usdBacktestKoChartPath = "chart_usd_ko.html"
 
 var usdCmd = &cobra.Command{
 	Use:   "usd",
@@ -50,6 +52,10 @@ func runUSD(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	log.Printf("Chart saved → %s", kimchiChartPath)
+	if err := chart.GenerateKimchiKorean(kimchiChartKoPath, records); err != nil {
+		return err
+	}
+	log.Printf("Chart saved → %s", kimchiChartKoPath)
 
 	// price = USDT/KRW (actual transaction price on Upbit)
 	// pctMap  = PremiumPct  (%) indicator  → strategies 1-8
@@ -75,12 +81,17 @@ func runUSD(cmd *cobra.Command, args []string) error {
 		results = append(results, btRate.Run(s, start, end))
 	}
 
-	reporter.Reporter{}.Print("USD/KRW", results, start, end)
+	// Contributions and portfolio values here are won amounts, not dollars.
+	reporter.Reporter{Currency: "₩", CurrencyLabel: "KRW"}.Print("USD/KRW", results, start, end)
 
 	if err := chart.GenerateUSD(usdBacktestChartPath, results, start, end); err != nil {
 		return err
 	}
 	log.Printf("Chart saved → %s", usdBacktestChartPath)
+	if err := chart.GenerateUSDKorean(usdBacktestKoChartPath, results, start, end); err != nil {
+		return err
+	}
+	log.Printf("Chart saved → %s", usdBacktestKoChartPath)
 	return nil
 }
 

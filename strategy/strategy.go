@@ -32,6 +32,7 @@ func (s *LumpSumStrategy) OnDay(_ time.Time, price float64, _ float64, p *portfo
 
 // AnnualDCAStrategy: fixed amount every January 1st.
 type AnnualDCAStrategy struct {
+	Label         string
 	InitialAmount float64
 	AnnualAmount  float64
 	lastBuyYear   int
@@ -39,6 +40,9 @@ type AnnualDCAStrategy struct {
 }
 
 func (s *AnnualDCAStrategy) Name() string {
+	if s.Label != "" {
+		return s.Label
+	}
 	return "Strategy 2: $12,000 every Jan 1st"
 }
 

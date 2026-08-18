@@ -33,10 +33,12 @@ type dataset struct {
 	Tension     float64   `json:"tension"`
 	Fill        bool      `json:"fill"`
 	FinalUSD    float64   `json:"finalUSD"`
+	Currency    string    `json:"currency,omitempty"`
 }
 
 type tableRow struct {
 	Color         string
+	Currency      string
 	StrategyName  string
 	TotalInvested float64
 	FinalValue    float64
@@ -93,9 +95,54 @@ func buildAnnotationsJS(annots []mddAnnot) template.JS {
 	return template.JS("{" + strings.Join(parts, ",") + "}")
 }
 
+// ChartI18n holds all translatable UI strings for the backtest chart.
+type ChartI18n struct {
+	PageTitle  string
+	H1         string
+	Strategy   string
+	Invested   string
+	FinalValue string
+	ReturnPct  string
+	MDD        string
+	Trades     string
+	AvgPeriod  string
+}
+
+var EnglishChartI18n = ChartI18n{
+	PageTitle:  "Strategy Backtest Chart",
+	H1:         "Strategy Portfolio Value — Monthly",
+	Strategy:   "Strategy",
+	Invested:   "Invested",
+	FinalValue: "Final Value",
+	ReturnPct:  "Return (%)",
+	MDD:        "MDD (%)",
+	Trades:     "Trades",
+	AvgPeriod:  "Avg Period",
+}
+
+var KoreanChartI18n = ChartI18n{
+	PageTitle:  "전략 백테스트 차트",
+	H1:         "전략별 포트폴리오 가치 — 월별",
+	Strategy:   "전략",
+	Invested:   "투자금",
+	FinalValue: "최종 가치",
+	ReturnPct:  "수익률 (%)",
+	MDD:        "MDD (%)",
+	Trades:     "거래 수",
+	AvgPeriod:  "평균 보유 기간",
+}
+
 // ── Main chart (per-ticker, all strategies) ──────────────────────────────────
 
 func Generate(outputPath string, tickers []TickerChart, start, end time.Time) error {
+	return generate(outputPath, tickers, start, end, EnglishChartI18n)
+}
+
+func GenerateKorean(outputPath string, tickers []TickerChart, start, end time.Time) error {
+	return generate(outputPath, tickers, start, end, KoreanChartI18n)
+}
+
+func generate(outputPath string, tickers []TickerChart, start, end time.Time, i18n ChartI18n) error {
 	sections := make([]chartSection, 0, len(tickers))
 	for _, t := range tickers {
 		labels, datasets := buildDatasets(t.Results)
@@ -130,10 +177,7 @@ func Generate(outputPath string, tickers []TickerChart, start, end time.Time) er
 			}
 		}
 
-		cur, curLabel := t.Currency, t.CurrencyLabel
-		if cur == "" {
-			cur = "$"
-		}
+		cur, curLabel := currencyOr(t.Currency), t.CurrencyLabel
 		if curLabel == "" {
 			curLabel = "USD"
 		}
@@ -151,9 +195,11 @@ func Generate(outputPath string, tickers []TickerChart, start, end time.Time) er
 	data := struct {
 		Period   string
 		Sections []chartSection
+		I18n     ChartI18n
 	}{
 		Period:   fmt.Sprintf("%s → %s", start.Format("2006-01-02"), end.Format("2006-01-02")),
 		Sections: sections,
+		I18n:     i18n,
 	}
 
 	f, err := os.Create(outputPath)
@@ -200,9 +246,10 @@ func buildDatasets(results []backtester.Result) ([]string, []dataset) {
 // ── Comparison chart (one strategy, all tickers) ─────────────────────────────
 
 type ComparisonLine struct {
-	Label  string
-	Color  string
-	Result backtester.Result
+	Label    string
+	Color    string
+	Currency string // symbol prefix, e.g. "$" or "₩" (default "$")
+	Result   backtester.Result
 }
 
 func GenerateComparison(outputPath, strategyName string, lines []ComparisonLine, start, end time.Time) error {
@@ -249,6 +296,7 @@ func GenerateComparison(outputPath, strategyName string, lines []ComparisonLine,
 			Tension:     0.1,
 			Fill:        false,
 			FinalUSD:    l.Result.FinalValue,
+			Currency:    currencyOr(l.Currency),
 		}
 		if l.Result.MDDDate != "" {
 			annots = append(annots, mddAnnot{
@@ -266,6 +314,7 @@ func GenerateComparison(outputPath, strategyName string, lines []ComparisonLine,
 	for i, l := range lines {
 		rows[i] = tableRow{
 			Color:         l.Color,
+			Currency:      currencyOr(l.Currency),
 			StrategyName:  l.Label,
 			TotalInvested: l.Result.TotalInvested,
 			FinalValue:    l.Result.FinalValue,
@@ -299,6 +348,14 @@ func GenerateComparison(outputPath, strategyName string, lines []ComparisonLine,
 }
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
+
+// currencyOr defaults an empty currency symbol to "$".
+func currencyOr(cur string) string {
+	if cur == "" {
+		return "$"
+	}
+	return cur
+}
 
 func formatUSD(v float64) string {
 	s := fmt.Sprintf("%.0f", v)
@@ -346,7 +403,7 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Strategy Backtest Chart</title>
+<title>{{$.I18n.PageTitle}}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0f0f1a; color: #e0e0e0; font-family: Arial, sans-serif; padding: 24px; }
@@ -369,7 +426,7 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
 </style>
 </head>
 <body>
-<h1>Strategy Portfolio Value — Monthly</h1>
+<h1>{{$.I18n.H1}}</h1>
 <p class="period">{{.Period}}</p>
 {{range .Sections}}
 <div class="section">
@@ -378,13 +435,13 @@ var htmlTemplate = template.Must(template.New("chart").Funcs(funcMap).Parse(`<!D
   <table id="table-{{.Symbol}}">
     <thead>
       <tr>
-        <th>Strategy</th>
-        <th>Invested ({{.CurrencyLabel}})</th>
-        <th>Final Value ({{.CurrencyLabel}})</th>
-        <th>Return (%)</th>
-        <th>MDD (%)</th>
-        <th>Trades</th>
-        <th>Avg Period</th>
+        <th>{{$.I18n.Strategy}}</th>
+        <th>{{$.I18n.Invested}} ({{.CurrencyLabel}})</th>
+        <th>{{$.I18n.FinalValue}} ({{.CurrencyLabel}})</th>
+        <th>{{$.I18n.ReturnPct}}</th>
+        <th>{{$.I18n.MDD}}</th>
+        <th>{{$.I18n.Trades}}</th>
+        <th>{{$.I18n.AvgPeriod}}</th>
       </tr>
     </thead>
     <tbody>
@@ -480,8 +537,8 @@ var comparisonTemplate = template.Must(template.New("comparison").Funcs(funcMap)
     <thead>
       <tr>
         <th>Ticker</th>
-        <th>Invested (USD)</th>
-        <th>Final Value (USD)</th>
+        <th>Invested</th>
+        <th>Final Value</th>
         <th>Return (%)</th>
         <th>MDD (%)</th>
       </tr>
@@ -490,8 +547,8 @@ var comparisonTemplate = template.Must(template.New("comparison").Funcs(funcMap)
     {{range .Rows}}
       <tr>
         <td><span class="ticker-cell"><span class="dot" style="background:{{.Color}}"></span>{{.StrategyName}}</span></td>
-        <td>{{formatUSD .TotalInvested}}</td>
-        <td>{{formatUSD .FinalValue}}</td>
+        <td>{{.Currency}}{{formatNum .TotalInvested}}</td>
+        <td>{{.Currency}}{{formatNum .FinalValue}}</td>
         <td class="{{if ge .ReturnPct 0.0}}pos{{else}}neg{{end}}">{{printf "%.2f%%" .ReturnPct}}</td>
         <td class="neg">{{printf "%.2f%%" .MDD}}</td>
       </tr>
@@ -517,7 +574,8 @@ new Chart(document.getElementById('chart'), {
         callbacks: {
           label: ctx => {
             const raw = ctx.dataset.rawData?.[ctx.dataIndex];
-            return ctx.dataset.label + ': ' + (raw != null ? '$' + raw.toLocaleString(undefined, {maximumFractionDigits: 0}) : '');
+            const cur = ctx.dataset.currency || '$';
+            return ctx.dataset.label + ': ' + (raw != null ? cur + raw.toLocaleString(undefined, {maximumFractionDigits: 0}) : '');
           }
         }
       },
@@ -526,7 +584,7 @@ new Chart(document.getElementById('chart'), {
         anchor: 'end', align: 'right',
         color: ctx => ctx.dataset.borderColor,
         font: { size: 11, weight: 'bold' },
-        formatter: (_, ctx) => '$' + ctx.dataset.finalUSD.toLocaleString(undefined, {maximumFractionDigits: 0})
+        formatter: (_, ctx) => (ctx.dataset.currency || '$') + ctx.dataset.finalUSD.toLocaleString(undefined, {maximumFractionDigits: 0})
       },
       annotation: { annotations: {{.Annotations}} }
     },
