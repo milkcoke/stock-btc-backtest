@@ -32,3 +32,7 @@ go.work.sum
 # BitBo Paid Data
 data/MVRV_Z-Score.csv
 data/mvrv_.*
+
+
+# Result
+*.html
