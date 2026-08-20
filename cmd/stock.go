@@ -47,7 +47,7 @@ func runStock(cmd *cobra.Command, args []string) error {
 		{"QLD", "data/qld.csv", "#e67e22", 0, "$", "USD", 1_000, downloader.QLD},
 		{"QQQ", "data/qqq.csv", "#3498db", 0, "$", "USD", 1_000, downloader.QQQ},
 		// KIH: 한국금융지주 (Korea Investment Holdings), KOSPI 071050 — quoted in KRW.
-		{"KIH", "data/kih.csv", "#9b59b6", 0, "₩", "KRW", 1_000_000, downloader.KIH},
+		{"KIH", "data/071050.KS.csv", "#9b59b6", 0, "₩", "KRW", 1_000_000, downloader.KIH},
 		// KQLD: 2x QQQ Korean ETF, uses QLD price data; TER 0.3372% vs QLD's 0.95% → lower fees
 		//{"KQLD", "data/qld.csv", "#2ecc71", 0.003372 - 0.0095, "$", "USD", 1_000, nil},
 	}

@@ -26,6 +26,7 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&endStr, "end", time.Now().Format("2006-01-02"), "backtest end date (YYYY-MM-DD)")
 	rootCmd.AddCommand(stockCmd)
 	rootCmd.AddCommand(btcCmd)
+	rootCmd.AddCommand(entryCmd)
 }
 
 func parseDates() (start, end time.Time, err error) {

@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"os"
 	"strconv"
-	"time"
 )
 
 // StockLoader loads price data and the Fear & Greed indicator from separate CSVs.
@@ -26,30 +25,7 @@ func (l StockLoader) Load() ([]PriceRecord, map[string]float64, error) {
 }
 
 func loadPrices(path string) ([]PriceRecord, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	rows, err := csv.NewReader(f).ReadAll()
-	if err != nil {
-		return nil, err
-	}
-
-	records := make([]PriceRecord, 0, len(rows)-1)
-	for _, row := range rows[1:] {
-		date, err := time.Parse("2006-01-02", row[0])
-		if err != nil {
-			continue
-		}
-		adjClose, err := strconv.ParseFloat(row[5], 64)
-		if err != nil {
-			continue
-		}
-		records = append(records, PriceRecord{Date: date, AdjClose: adjClose})
-	}
-	return records, nil
+	return readPriceCSV(path, "AdjClose")
 }
 
 func loadFearGreed(path string) (map[string]float64, error) {

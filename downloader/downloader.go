@@ -15,7 +15,17 @@ import (
 type yahooResponse struct {
 	Chart struct {
 		Result []struct {
-			Timestamp  []int64 `json:"timestamp"`
+			Timestamp []int64 `json:"timestamp"`
+			Meta      struct {
+				ExchangeName         string `json:"exchangeName"`
+				GMTOffset            int64  `json:"gmtoffset"`
+				CurrentTradingPeriod struct {
+					Regular struct {
+						Start int64 `json:"start"`
+						End   int64 `json:"end"`
+					} `json:"regular"`
+				} `json:"currentTradingPeriod"`
+			} `json:"meta"`
 			Indicators struct {
 				Quote []struct {
 					Open   []*float64 `json:"open"`
@@ -124,6 +134,31 @@ func Stock(symbol, path string) error {
 	quote := result.Indicators.Quote[0]
 	adjClose := result.Indicators.AdjClose[0].AdjClose
 
+	loc := time.FixedZone(result.Meta.ExchangeName, int(result.Meta.GMTOffset))
+	rows := make([][]string, 0, len(result.Timestamp))
+	for i, ts := range result.Timestamp {
+		if quote.Open[i] == nil || adjClose[i] == nil {
+			continue
+		}
+		rows = append(rows, []string{
+			time.Unix(ts, 0).In(loc).Format("2006-01-02"),
+			ftos(*quote.Open[i]),
+			ftos(*quote.High[i]),
+			ftos(*quote.Low[i]),
+			ftos(*quote.Close[i]),
+			ftos(*adjClose[i]),
+			strconv.FormatFloat(*quote.Volume[i], 'f', 0, 64),
+		})
+	}
+
+	reg := result.Meta.CurrentTradingPeriod.Regular
+	if day, partial := partialBarDate(reg.Start, reg.End, loc, time.Now()); partial && len(rows) > 0 &&
+		rows[len(rows)-1][0] == day {
+		fmt.Fprintf(os.Stderr, "[%s] dropping %s: the regular session is still open, so that bar is an intraday snapshot\n",
+			symbol, day)
+		rows = rows[:len(rows)-1]
+	}
+
 	f, err := os.Create(path)
 	if err != nil {
 		return err
@@ -134,22 +169,27 @@ func Stock(symbol, path string) error {
 	defer w.Flush()
 
 	w.Write([]string{"Date", "Open", "High", "Low", "Close", "AdjClose", "Volume"})
-
-	for i, ts := range result.Timestamp {
-		if quote.Open[i] == nil || adjClose[i] == nil {
-			continue
-		}
-		w.Write([]string{
-			time.Unix(ts, 0).UTC().Format("2006-01-02"),
-			ftos(*quote.Open[i]),
-			ftos(*quote.High[i]),
-			ftos(*quote.Low[i]),
-			ftos(*quote.Close[i]),
-			ftos(*adjClose[i]),
-			strconv.FormatFloat(*quote.Volume[i], 'f', 0, 64),
-		})
+	for _, row := range rows {
+		w.Write(row)
 	}
 	return nil
+}
+
+// partialBarDate reports the exchange-local date whose bar is still being
+// written, if any.
+//
+// The obvious test — regularMarketTime < regular.end — is wrong. While the
+// market is closed Yahoo points currentTradingPeriod at the *next* session, so
+// that comparison condemns yesterday's already-final bar. A bar is only partial
+// when the session it belongs to is running right now.
+func partialBarDate(start, end int64, loc *time.Location, now time.Time) (string, bool) {
+	if start == 0 || end == 0 {
+		return "", false
+	}
+	if ts := now.Unix(); ts < start || ts >= end {
+		return "", false
+	}
+	return time.Unix(start, 0).In(loc).Format("2006-01-02"), true
 }
 
 func ftos(v float64) string {
