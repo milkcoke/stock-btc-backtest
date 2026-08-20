@@ -59,7 +59,7 @@ var entryTemplate = template.Must(template.New("entry").Funcs(funcMap).Parse(`<!
 </div>
 
 <div class="section">
-  <h2>목표 수익률 도달 기간 (달력일)</h2>
+  <h2>목표 수익률 도달 기간</h2>
   <table>
     <thead><tr><th>목표</th><th>달성</th><th>평균</th><th>중위값</th><th>최소</th><th>최대</th></tr></thead>
     <tbody>

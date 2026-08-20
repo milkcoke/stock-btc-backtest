@@ -6,11 +6,11 @@ import (
 	"strconv"
 	"strings"
 
+	"stock-btc-backtest/browser"
 	"stock-btc-backtest/chart"
 	"stock-btc-backtest/downloader"
 	"stock-btc-backtest/eventstudy"
 	"stock-btc-backtest/loader"
-	"stock-btc-backtest/reporter"
 	"stock-btc-backtest/valuation"
 
 	"github.com/spf13/cobra"
@@ -52,7 +52,7 @@ func init() {
 	entryCmd.Flags().Float64Var(&entryMADiscount, "ma-discount", 0.10, "required discount to the moving average")
 	entryCmd.Flags().IntVar(&entryRSIPeriod, "rsi-period", 14, "RSI period")
 	entryCmd.Flags().Float64Var(&entryRSIMax, "rsi-max", 35, "maximum RSI at entry")
-	entryCmd.Flags().StringVar(&entryTargets, "targets", "20,30,40,50", "profit targets in percent, comma separated")
+	entryCmd.Flags().StringVar(&entryTargets, "targets", "10,20,30,40,50", "profit targets in percent, comma separated")
 	entryCmd.Flags().StringVar(&entryPriceCol, "price-col", "AdjClose", "price column: AdjClose or Close")
 	entryCmd.Flags().Float64Var(&entryMDDThreshold, "mdd-threshold", 0,
 		"fixed drawdown threshold as a fraction (0.30 = 30%); 0 derives it from the window's average yearly MDD")
@@ -93,7 +93,6 @@ func runEntry(_ *cobra.Command, _ []string) error {
 	}
 
 	val := loadValuation(entryTicker, result, prices)
-	reporter.EntryReporter{Currency: currencyFor(entryTicker)}.Print(result, val)
 
 	output := entryOutput
 	if output == "" {
@@ -102,8 +101,7 @@ func runEntry(_ *cobra.Command, _ []string) error {
 	if err := chart.GenerateEntry(output, result, val); err != nil {
 		return err
 	}
-	fmt.Printf("chart: %s\n", output)
-	return nil
+	return browser.Open(output)
 }
 
 // loadValuation prefers a local file and derives one from SEC filings when
@@ -165,11 +163,4 @@ func parseTargets(s string) ([]float64, error) {
 		return nil, fmt.Errorf("no targets given")
 	}
 	return out, nil
-}
-
-func currencyFor(ticker string) string {
-	if strings.HasSuffix(ticker, ".KS") || strings.HasSuffix(ticker, ".KQ") {
-		return "₩"
-	}
-	return "$"
 }

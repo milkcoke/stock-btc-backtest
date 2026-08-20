@@ -79,19 +79,18 @@ type entryRow struct {
 func GenerateEntry(outputPath string, res eventstudy.Result, val *valuation.Summary) error {
 	v := entryView{
 		Symbol: res.Symbol,
-		Period: fmt.Sprintf("%s → %s · %d년 · 거래일 %d일 · 가격열 %s",
+		Period: fmt.Sprintf("%s → %s · %d년 · 거래일 %d일",
 			res.From.Format("2006-01-02"), res.To.Format("2006-01-02"),
-			res.Years, len(res.Dates), res.PriceColumn),
+			res.Years, len(res.Dates)),
 		Rule:    res.Rule,
 		MALabel: fmt.Sprintf("MA%d", maWindowOf(res)),
 	}
 
 	if res.MDDDerived {
-		v.MDDNote = fmt.Sprintf("낙폭 임계값 %.2f%% — 완전 연도 %d개의 평균 MDD (중위값 %.2f%%). "+
-			"창 전체 평균이라 in-sample 참고 지표다.",
+		v.MDDNote = fmt.Sprintf("MDD %.2f%% — 완전 연도 %d개의 평균 (중위값 %.2f%%)",
 			res.MDDThreshold*100, res.MDDSummary.N, res.MDDSummary.Median)
 	} else {
-		v.MDDNote = fmt.Sprintf("낙폭 임계값 %.2f%% (직접 지정)", res.MDDThreshold*100)
+		v.MDDNote = fmt.Sprintf("MDD %.2f%% (직접 지정)", res.MDDThreshold*100)
 	}
 
 	labels := make([]string, len(res.Dates))

@@ -45,37 +45,37 @@ type yahooResponse struct {
 // EnsureUpToDate downloads only when the local CSV cannot already answer for
 // today, so repeated runs on the same day read the file instead of the network.
 func EnsureUpToDate(path string, dl func(string) error) error {
-	if fresh, why := isFresh(path, time.Now()); fresh {
-		fmt.Fprintf(os.Stderr, "[cache] %s: %s\n", path, why)
+	if isFresh(path, time.Now()) {
 		return nil
 	}
-	return dl(path)
+	if err := dl(path); err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr, "[download] %s\n", path)
+	return nil
 }
 
-// isFresh reports whether the file already covers today, and why.
+// isFresh reports whether the file already covers today.
 //
-// Two conditions, and the second is the one that carries the weight. A CSV whose
-// last row is dated today is obviously current — but that only happens after the
-// exchange closes, because an unfinished session is deliberately not written.
-// Before the close, and all weekend, the newest row that can exist is still
-// yesterday's, so a date check alone would re-download on every run forever.
-// Whether the file was fetched today answers that case correctly.
-func isFresh(path string, now time.Time) (bool, string) {
+// Two conditions, and the first carries the weight. A CSV whose last row is
+// dated today is obviously current — but that only happens after the exchange
+// closes, because an unfinished session is deliberately not written. Before the
+// close, and all weekend, the newest row that can exist is still yesterday's, so
+// a date check alone would re-download on every run forever. Whether the file
+// was fetched today answers that case correctly.
+func isFresh(path string, now time.Time) bool {
 	info, err := os.Stat(path)
 	if err != nil {
-		return false, ""
+		return false
 	}
 	if sameDay(info.ModTime(), now) {
-		return true, "오늘 받은 파일이라 다시 받지 않는다"
+		return true
 	}
 	last, err := lastDateInCSV(path)
 	if err != nil {
-		return false, ""
+		return false
 	}
-	if !last.Before(now.UTC().Truncate(24 * time.Hour)) {
-		return true, "마지막 행이 오늘 날짜라 다시 받지 않는다"
-	}
-	return false, ""
+	return !last.Before(now.UTC().Truncate(24 * time.Hour))
 }
 
 func sameDay(a, b time.Time) bool {
