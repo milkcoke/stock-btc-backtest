@@ -24,6 +24,5 @@ func CSVPath(ticker string) string {
 // can hand it straight to loader.PriceCSV.
 func Ticker(symbol string) (string, error) {
 	path := CSVPath(symbol)
-	err := EnsureUpToDate(path, func(p string) error { return Stock(symbol, p) })
-	return path, err
+	return path, EnsureUpToDate(path, func(p string) error { return Stock(symbol, p) })
 }
